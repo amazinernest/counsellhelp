@@ -1,20 +1,51 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+// Main App entry point
+// Wraps the app with necessary providers and navigation
 
-export default function App() {
+import React from 'react';
+import { StatusBar } from 'expo-status-bar';
+import { NavigationContainer } from '@react-navigation/native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { AuthProvider } from './src/contexts/AuthContext';
+import { NotificationProvider } from './src/contexts/NotificationContext';
+import { useNotifications } from './src/contexts/NotificationContext';
+import AppNavigator from './src/navigation/AppNavigator';
+import NotificationBanner from './src/components/NotificationBanner';
+import { View, StyleSheet } from 'react-native';
+
+// Inner component that can use notifications context
+function AppContent() {
+  const { currentNotification, dismissNotification } = useNotifications();
+
   return (
     <View style={styles.container}>
-      <Text>Open up App.tsx to start working on your app!</Text>
+      <NavigationContainer>
+        <AppNavigator />
+      </NavigationContainer>
+      {/* In-app notification banner */}
+      <NotificationBanner
+        notification={currentNotification}
+        onDismiss={dismissNotification}
+      />
       <StatusBar style="auto" />
     </View>
+  );
+}
+
+// Main App component with providers
+export default function App() {
+  return (
+    <SafeAreaProvider>
+      <AuthProvider>
+        <NotificationProvider>
+          <AppContent />
+        </NotificationProvider>
+      </AuthProvider>
+    </SafeAreaProvider>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });
