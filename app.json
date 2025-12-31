@@ -28,6 +28,8 @@
       "bundler": "metro"
     },
     "extra": {
+      "supabaseUrl": "https://iyzhzmcmarijtzuwziqs.supabase.co",
+      "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml5emh6bWNtYXJpanR6dXd6aXFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcwMDE1OTgsImV4cCI6MjA4MjU3NzU5OH0.8UFO8fhlcb0BjHRfkJNIHW17gVuoYdw860_57Fwf74c",
       "eas": {
         "projectId": "621efdc5-b733-41e0-a236-eb59b1edc578"
       }

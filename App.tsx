@@ -10,6 +10,7 @@ import { NotificationProvider } from './src/contexts/NotificationContext';
 import { useNotifications } from './src/contexts/NotificationContext';
 import AppNavigator from './src/navigation/AppNavigator';
 import NotificationBanner from './src/components/NotificationBanner';
+import ErrorBoundary from './src/components/ErrorBoundary';
 import { View, StyleSheet } from 'react-native';
 
 // Inner component that can use notifications context
@@ -31,16 +32,18 @@ function AppContent() {
   );
 }
 
-// Main App component with providers
+// Main App component with providers and error boundary
 export default function App() {
   return (
-    <SafeAreaProvider>
-      <AuthProvider>
-        <NotificationProvider>
-          <AppContent />
-        </NotificationProvider>
-      </AuthProvider>
-    </SafeAreaProvider>
+    <ErrorBoundary>
+      <SafeAreaProvider>
+        <AuthProvider>
+          <NotificationProvider>
+            <AppContent />
+          </NotificationProvider>
+        </AuthProvider>
+      </SafeAreaProvider>
+    </ErrorBoundary>
   );
 }
 
