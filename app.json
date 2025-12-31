@@ -20,11 +20,17 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#2A9D8F"
-      }
+      },
+      "package": "com.amazinernest.Counsellhelp"
     },
     "web": {
       "favicon": "./assets/favicon.png",
       "bundler": "metro"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "621efdc5-b733-41e0-a236-eb59b1edc578"
+      }
     }
   }
 }
