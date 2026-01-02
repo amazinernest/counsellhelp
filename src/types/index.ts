@@ -112,4 +112,39 @@ export type MainStackParamList = {
     CounselorProfile: { counselorId: string };
     Chat: { conversationId: string; otherUserName: string };
     EditProfile: undefined;
+    PersonalInfo: undefined;
+    CommunicationPreferences: undefined;
+    SessionHistory: undefined;
+    SharedNotes: undefined;
+    PrivacySecurity: undefined;
+    ChangePassword: undefined;
+    HelpSupport: undefined;
+    Payment: {
+        counselorId: string;
+        counselorName: string;
+    };
 };
+
+// Session status types
+export type SessionStatus = 'pending' | 'paid' | 'completed' | 'cancelled' | 'refunded';
+
+// Counseling session
+export interface Session {
+    id: string;
+    client_id: string;
+    counselor_id: string;
+    conversation_id: string | null;
+    scheduled_at: string | null;
+    status: SessionStatus;
+    amount: number;
+    commission: number;
+    counselor_payout: number;
+    payment_reference: string;
+    paystack_reference: string | null;
+    paid_at: string | null;
+    completed_at: string | null;
+    created_at: string;
+    // Joined data
+    client?: Profile;
+    counselor?: Profile;
+}

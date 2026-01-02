@@ -1,44 +1,53 @@
 // Theme configuration - colors, spacing, typography
-// Calming color palette suitable for a counseling app
+// Dark theme color palette for a professional counseling app
 
 export const colors = {
-    // Primary - calming teal/blue
-    primary: '#2A9D8F',
-    primaryLight: '#40B4A7',
-    primaryDark: '#1E7A70',
+    // Primary - vibrant blue for actions
+    primary: '#2563EB',
+    primaryLight: '#3B82F6',
+    primaryDark: '#1D4ED8',
 
     // Secondary - warm coral for accents
     secondary: '#E76F51',
     secondaryLight: '#F4A261',
 
-    // Neutrals
-    background: '#F8F9FA',
-    surface: '#FFFFFF',
-    surfaceSecondary: '#F1F3F5',
+    // Dark theme backgrounds
+    background: '#0D1B2A',
+    backgroundSecondary: '#1B2838',
+    surface: '#1B2838',
+    surfaceSecondary: '#243447',
+    surfaceLight: '#2D3F52',
 
-    // Text
-    textPrimary: '#212529',
-    textSecondary: '#6C757D',
-    textLight: '#ADB5BD',
+    // Text colors for dark theme
+    textPrimary: '#FFFFFF',
+    textSecondary: '#9CA3AF',
+    textLight: '#6B7280',
     textInverse: '#FFFFFF',
 
     // Status
-    success: '#40C057',
-    warning: '#FD7E14',
-    error: '#FA5252',
-    info: '#339AF0',
+    success: '#22C55E',
+    warning: '#F59E0B',
+    error: '#EF4444',
+    info: '#3B82F6',
 
     // Available/Unavailable badges
-    available: '#40C057',
-    unavailable: '#ADB5BD',
+    available: '#22C55E',
+    unavailable: '#6B7280',
 
     // Borders
-    border: '#DEE2E6',
-    borderLight: '#E9ECEF',
+    border: '#374151',
+    borderLight: '#4B5563',
 
     // Message bubbles
-    messageSent: '#2A9D8F',
-    messageReceived: '#E9ECEF',
+    messageSent: '#2563EB',
+    messageReceived: '#374151',
+
+    // Ratings
+    star: '#FBBF24',
+
+    // Tags/Chips
+    tagBackground: '#374151',
+    tagText: '#9CA3AF',
 };
 
 export const spacing = {
@@ -82,21 +91,21 @@ export const shadows = {
     sm: {
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
+        shadowOpacity: 0.3,
         shadowRadius: 2,
         elevation: 2,
     },
     md: {
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.15,
+        shadowOpacity: 0.4,
         shadowRadius: 4,
         elevation: 4,
     },
     lg: {
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
+        shadowOpacity: 0.5,
         shadowRadius: 8,
         elevation: 8,
     },

@@ -8,12 +8,13 @@ import {
     FlatList,
     TouchableOpacity,
     RefreshControl,
+    Image,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import LoadingSpinner from '../../components/LoadingSpinner';
-import { colors, spacing, borderRadius, typography, shadows } from '../../styles/theme';
+import { colors, spacing, borderRadius, typography } from '../../styles/theme';
 import { Conversation, MainStackParamList } from '../../types';
 
 type ConversationsScreenProps = {
@@ -53,10 +54,10 @@ export default function ConversationsScreen({ navigation }: ConversationsScreenP
             const query = supabase
                 .from('conversations')
                 .select(`
-          *,
-          client:profiles!conversations_client_id_fkey(*),
-          counselor:profiles!conversations_counselor_id_fkey(*)
-        `)
+                    *,
+                    client:profiles!conversations_client_id_fkey(*),
+                    counselor:profiles!conversations_counselor_id_fkey(*)
+                `)
                 .order('last_message_at', { ascending: false, nullsFirst: false });
 
             // Filter by role
@@ -126,9 +127,17 @@ export default function ConversationsScreen({ navigation }: ConversationsScreenP
         });
     }
 
+    // Get avatar color
+    function getAvatarColor(name: string): string {
+        const colorOptions = ['#3B82F6', '#8B5CF6', '#EC4899', '#10B981', '#F59E0B'];
+        const index = name.charCodeAt(0) % colorOptions.length;
+        return colorOptions[index];
+    }
+
     // Render conversation item
     function renderConversation({ item }: { item: Conversation }) {
         const otherUser = isClient ? item.counselor : item.client;
+        const avatarColor = getAvatarColor(otherUser?.full_name || 'U');
 
         return (
             <TouchableOpacity
@@ -136,10 +145,21 @@ export default function ConversationsScreen({ navigation }: ConversationsScreenP
                 onPress={() => handleConversationPress(item)}
                 activeOpacity={0.7}
             >
-                <View style={styles.avatar}>
-                    <Text style={styles.avatarText}>
-                        {otherUser?.full_name?.charAt(0)?.toUpperCase() || '?'}
-                    </Text>
+                <View style={[styles.avatarContainer, { borderColor: avatarColor }]}>
+                    {otherUser?.avatar_url ? (
+                        <Image
+                            source={{ uri: otherUser.avatar_url }}
+                            style={styles.avatar}
+                        />
+                    ) : (
+                        <View style={[styles.avatarPlaceholder, { backgroundColor: avatarColor }]}>
+                            <Text style={styles.avatarText}>
+                                {otherUser?.full_name?.charAt(0)?.toUpperCase() || '?'}
+                            </Text>
+                        </View>
+                    )}
+                    {/* Online indicator */}
+                    <View style={styles.onlineIndicator} />
                 </View>
                 <View style={styles.conversationContent}>
                     <View style={styles.conversationHeader}>
@@ -182,6 +202,11 @@ export default function ConversationsScreen({ navigation }: ConversationsScreenP
 
     return (
         <View style={styles.container}>
+            {/* Header */}
+            <View style={styles.header}>
+                <Text style={styles.headerTitle}>Messages</Text>
+            </View>
+
             {error ? (
                 <View style={styles.errorContainer}>
                     <Text style={styles.errorText}>{error}</Text>
@@ -213,6 +238,16 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: colors.background,
     },
+    header: {
+        paddingHorizontal: spacing.lg,
+        paddingTop: spacing.xl,
+        paddingBottom: spacing.md,
+    },
+    headerTitle: {
+        fontSize: typography.sizes.xxl,
+        fontWeight: typography.weights.bold,
+        color: colors.textPrimary,
+    },
     listContent: {
         padding: spacing.md,
         flexGrow: 1,
@@ -224,21 +259,46 @@ const styles = StyleSheet.create({
         padding: spacing.md,
         borderRadius: borderRadius.lg,
         marginBottom: spacing.sm,
-        ...shadows.sm,
+        borderWidth: 1,
+        borderColor: colors.border,
+    },
+    avatarContainer: {
+        width: 52,
+        height: 52,
+        borderRadius: 26,
+        borderWidth: 2,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: spacing.md,
+        position: 'relative',
     },
     avatar: {
-        width: 50,
-        height: 50,
-        borderRadius: 25,
-        backgroundColor: colors.primaryLight,
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+    },
+    avatarPlaceholder: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
         alignItems: 'center',
         justifyContent: 'center',
-        marginRight: spacing.md,
     },
     avatarText: {
         fontSize: typography.sizes.lg,
         fontWeight: typography.weights.bold,
-        color: colors.textInverse,
+        color: colors.textPrimary,
+    },
+    onlineIndicator: {
+        position: 'absolute',
+        bottom: 2,
+        right: 2,
+        width: 12,
+        height: 12,
+        borderRadius: 6,
+        backgroundColor: colors.success,
+        borderWidth: 2,
+        borderColor: colors.surface,
     },
     conversationContent: {
         flex: 1,

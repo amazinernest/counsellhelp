@@ -46,7 +46,7 @@ export default function Button({
         >
             {loading ? (
                 <ActivityIndicator
-                    color={variant === 'outline' ? colors.primary : colors.textInverse}
+                    color={variant === 'outline' ? colors.primary : colors.textPrimary}
                 />
             ) : (
                 <Text
@@ -68,7 +68,7 @@ const styles = StyleSheet.create({
     button: {
         paddingVertical: spacing.md,
         paddingHorizontal: spacing.lg,
-        borderRadius: borderRadius.md,
+        borderRadius: borderRadius.lg,
         alignItems: 'center',
         justifyContent: 'center',
         minHeight: 48,
@@ -77,12 +77,14 @@ const styles = StyleSheet.create({
         backgroundColor: colors.primary,
     },
     secondary: {
-        backgroundColor: colors.secondary,
+        backgroundColor: colors.surfaceSecondary,
+        borderWidth: 1,
+        borderColor: colors.border,
     },
     outline: {
         backgroundColor: 'transparent',
-        borderWidth: 2,
-        borderColor: colors.primary,
+        borderWidth: 1,
+        borderColor: colors.border,
     },
     disabled: {
         opacity: 0.6,
@@ -92,13 +94,13 @@ const styles = StyleSheet.create({
         fontWeight: typography.weights.semibold,
     },
     primaryText: {
-        color: colors.textInverse,
+        color: colors.textPrimary,
     },
     secondaryText: {
-        color: colors.textInverse,
+        color: colors.textPrimary,
     },
     outlineText: {
-        color: colors.primary,
+        color: colors.textSecondary,
     },
     disabledText: {
         opacity: 0.8,

@@ -11,27 +11,42 @@ import ConversationsScreen from '../screens/main/ConversationsScreen';
 import ChatScreen from '../screens/main/ChatScreen';
 import ProfileScreen from '../screens/main/ProfileScreen';
 import EditProfileScreen from '../screens/main/EditProfileScreen';
+// Settings screens
+import PersonalInfoScreen from '../screens/settings/PersonalInfoScreen';
+import CommunicationPreferencesScreen from '../screens/settings/CommunicationPreferencesScreen';
+import SharedNotesScreen from '../screens/settings/SharedNotesScreen';
+import PrivacySecurityScreen from '../screens/settings/PrivacySecurityScreen';
+import ChangePasswordScreen from '../screens/settings/ChangePasswordScreen';
+import HelpSupportScreen from '../screens/settings/HelpSupportScreen';
+import PaymentScreen from '../screens/main/PaymentScreen';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotifications } from '../contexts/NotificationContext';
-import { colors, typography } from '../styles/theme';
+import { colors, typography, spacing } from '../styles/theme';
 import { MainTabParamList, MainStackParamList } from '../types';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 const Stack = createNativeStackNavigator<MainStackParamList>();
 
-// Tab icon component
+// Tab icon component with modern icons
 function TabIcon({ name, focused }: { name: string; focused: boolean }) {
-    const icons: Record<string, string> = {
-        Home: '🏠',
-        Counselors: '👨‍⚕️',
-        Messages: '💬',
-        Profile: '👤',
+    const icons: Record<string, { active: string; inactive: string }> = {
+        Home: { active: '🏠', inactive: '🏠' },
+        Counselors: { active: '🔍', inactive: '🔍' },
+        Messages: { active: '💬', inactive: '💬' },
+        Profile: { active: '👤', inactive: '👤' },
     };
 
+    const icon = icons[name] || { active: '•', inactive: '•' };
+
     return (
-        <Text style={{ fontSize: 24, opacity: focused ? 1 : 0.5 }}>
-            {icons[name] || '•'}
-        </Text>
+        <View style={styles.tabIconContainer}>
+            <Text style={[
+                styles.tabIcon,
+                focused ? styles.tabIconActive : styles.tabIconInactive
+            ]}>
+                {focused ? icon.active : icon.inactive}
+            </Text>
+        </View>
     );
 }
 
@@ -55,21 +70,27 @@ function MainTabs() {
         <Tab.Navigator
             screenOptions={({ route }) => ({
                 tabBarIcon: ({ focused }) => (
-                    <View>
+                    <View style={styles.tabIconWrapper}>
                         <TabIcon name={route.name} focused={focused} />
                         {route.name === 'Messages' && <Badge count={unreadCount} />}
                     </View>
                 ),
-                tabBarActiveTintColor: colors.primary,
+                tabBarActiveTintColor: colors.textPrimary,
                 tabBarInactiveTintColor: colors.textSecondary,
                 tabBarStyle: {
-                    backgroundColor: colors.surface,
+                    backgroundColor: colors.background,
                     borderTopColor: colors.border,
+                    borderTopWidth: 1,
+                    paddingTop: spacing.sm,
+                    paddingBottom: spacing.md,
+                    height: 70,
                 },
                 tabBarLabelStyle: {
                     fontSize: typography.sizes.xs,
                     fontWeight: typography.weights.medium,
+                    marginTop: spacing.xs,
                 },
+                tabBarShowLabel: false,
                 headerStyle: {
                     backgroundColor: colors.background,
                 },
@@ -78,6 +99,7 @@ function MainTabs() {
                     color: colors.textPrimary,
                 },
                 headerShadowVisible: false,
+                headerShown: false,
             })}
         >
             <Tab.Screen
@@ -89,7 +111,7 @@ function MainTabs() {
                 <Tab.Screen
                     name="Counselors"
                     component={CounselorListScreen}
-                    options={{ title: 'Counselors' }}
+                    options={{ title: 'Search' }}
                 />
             )}
             <Tab.Screen
@@ -118,8 +140,11 @@ export default function MainNavigator() {
                     fontWeight: typography.weights.semibold,
                     color: colors.textPrimary,
                 },
-                headerTintColor: colors.primary,
+                headerTintColor: colors.textPrimary,
                 headerShadowVisible: false,
+                contentStyle: {
+                    backgroundColor: colors.background,
+                },
             }}
         >
             <Stack.Screen
@@ -130,28 +155,85 @@ export default function MainNavigator() {
             <Stack.Screen
                 name="CounselorProfile"
                 component={CounselorProfileScreen}
-                options={{ title: 'Counselor Profile' }}
+                options={{ headerShown: false }}
             />
             <Stack.Screen
                 name="Chat"
                 component={ChatScreen}
-                options={{ title: 'Chat' }}
+                options={{ headerShown: false }}
             />
             <Stack.Screen
                 name="EditProfile"
                 component={EditProfileScreen}
-                options={{ title: 'Edit Profile' }}
+                options={{ headerShown: false }}
+            />
+            {/* Settings Screens */}
+            <Stack.Screen
+                name="PersonalInfo"
+                component={PersonalInfoScreen}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name="CommunicationPreferences"
+                component={CommunicationPreferencesScreen}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name="SessionHistory"
+                component={ConversationsScreen}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name="SharedNotes"
+                component={SharedNotesScreen}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name="PrivacySecurity"
+                component={PrivacySecurityScreen}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name="ChangePassword"
+                component={ChangePasswordScreen}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name="HelpSupport"
+                component={HelpSupportScreen}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name="Payment"
+                component={PaymentScreen}
+                options={{ headerShown: false }}
             />
         </Stack.Navigator>
     );
 }
 
 const styles = StyleSheet.create({
+    tabIconContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    tabIconWrapper: {
+        position: 'relative',
+    },
+    tabIcon: {
+        fontSize: 24,
+    },
+    tabIconActive: {
+        opacity: 1,
+    },
+    tabIconInactive: {
+        opacity: 0.5,
+    },
     badge: {
         position: 'absolute',
-        right: -8,
+        right: -10,
         top: -4,
-        backgroundColor: colors.error,
+        backgroundColor: colors.primary,
         borderRadius: 10,
         minWidth: 18,
         height: 18,
@@ -160,7 +242,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 4,
     },
     badgeText: {
-        color: colors.textInverse,
+        color: colors.textPrimary,
         fontSize: 10,
         fontWeight: typography.weights.bold,
     },

@@ -1,8 +1,8 @@
 // Counselor card component for displaying counselor info in lists
 
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { colors, spacing, borderRadius, typography, shadows } from '../styles/theme';
+import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { colors, spacing, borderRadius, typography } from '../styles/theme';
 import { CounselorProfile, Profile, Specialty } from '../types';
 
 interface CounselorCardProps {
@@ -11,71 +11,105 @@ interface CounselorCardProps {
 }
 
 // Human-readable specialty labels
-const specialtyLabels: Record<Specialty, string> = {
-    relationship: 'Relationship',
+const specialtyLabels: Record<string, string> = {
+    relationship: 'Relationships',
     academic: 'Academic',
     career: 'Career',
-    mental_wellbeing: 'Mental Wellbeing',
+    mental_wellbeing: 'CBT',
     family: 'Family',
-    stress_management: 'Stress Management',
+    stress_management: 'Stress',
     personal_development: 'Personal Development',
+    anxiety: 'Anxiety',
+    depression: 'Depression',
+    trauma: 'Trauma',
 };
 
 export default function CounselorCard({ counselor, onPress }: CounselorCardProps) {
+    // Generate random rating for demo
+    const rating = (Math.random() * 0.5 + 4.5).toFixed(1);
+
+    // Get avatar color based on name
+    const getAvatarColor = (name: string): string => {
+        const colors = ['#3B82F6', '#8B5CF6', '#EC4899', '#10B981', '#F59E0B'];
+        const index = name.charCodeAt(0) % colors.length;
+        return colors[index];
+    };
+
+    const avatarColor = getAvatarColor(counselor.profile?.full_name || 'C');
+
     return (
         <TouchableOpacity
             style={styles.card}
             onPress={onPress}
             activeOpacity={0.7}
         >
-            {/* Avatar placeholder */}
-            <View style={styles.avatar}>
-                <Text style={styles.avatarText}>
-                    {counselor.profile?.full_name?.charAt(0)?.toUpperCase() || '?'}
-                </Text>
+            {/* Avatar */}
+            <View style={[styles.avatarContainer, { borderColor: avatarColor }]}>
+                {counselor.profile?.avatar_url ? (
+                    <Image
+                        source={{ uri: counselor.profile.avatar_url }}
+                        style={styles.avatar}
+                    />
+                ) : (
+                    <View style={[styles.avatarPlaceholder, { backgroundColor: avatarColor }]}>
+                        <Text style={styles.avatarText}>
+                            {counselor.profile?.full_name?.charAt(0)?.toUpperCase() || '?'}
+                        </Text>
+                    </View>
+                )}
+                {/* Status indicator */}
+                <View style={[
+                    styles.statusIndicator,
+                    { backgroundColor: counselor.is_available ? colors.available : colors.warning }
+                ]} />
             </View>
 
             <View style={styles.content}>
-                {/* Name and availability */}
+                {/* Name and rating */}
                 <View style={styles.header}>
                     <Text style={styles.name} numberOfLines={1}>
                         {counselor.profile?.full_name || 'Counselor'}
                     </Text>
-                    <View
-                        style={[
-                            styles.availabilityBadge,
-                            counselor.is_available ? styles.available : styles.unavailable,
-                        ]}
-                    >
-                        <Text style={styles.availabilityText}>
-                            {counselor.is_available ? 'Available' : 'Unavailable'}
-                        </Text>
+                    <View style={styles.ratingContainer}>
+                        <Text style={styles.starIcon}>★</Text>
+                        <Text style={styles.ratingText}>{rating}</Text>
                     </View>
                 </View>
 
-                {/* Bio preview */}
-                <Text style={styles.bio} numberOfLines={2}>
-                    {counselor.bio || 'No bio available'}
+                {/* Title/Bio */}
+                <Text style={styles.title} numberOfLines={1}>
+                    {counselor.bio || 'Licensed Counselor'}
                 </Text>
 
                 {/* Specialties */}
-                <View style={styles.specialties}>
-                    {counselor.specialties?.slice(0, 3).map((specialty, index) => (
-                        <View key={index} style={styles.specialtyTag}>
-                            <Text style={styles.specialtyText}>
+                <View style={styles.tagsContainer}>
+                    {counselor.specialties?.slice(0, 2).map((specialty, index) => (
+                        <View key={index} style={styles.tag}>
+                            <Text style={styles.tagText}>
                                 {specialtyLabels[specialty] || specialty}
                             </Text>
                         </View>
                     ))}
-                    {counselor.specialties?.length > 3 && (
-                        <Text style={styles.moreText}>+{counselor.specialties.length - 3}</Text>
-                    )}
                 </View>
 
-                {/* Experience */}
-                <Text style={styles.experience}>
-                    {counselor.years_experience} {counselor.years_experience === 1 ? 'year' : 'years'} experience
-                </Text>
+                {/* Availability & Experience */}
+                <View style={styles.footer}>
+                    <View style={styles.availabilityContainer}>
+                        <View style={[
+                            styles.availabilityDot,
+                            { backgroundColor: counselor.is_available ? colors.available : colors.warning }
+                        ]} />
+                        <Text style={[
+                            styles.availabilityText,
+                            { color: counselor.is_available ? colors.available : colors.textSecondary }
+                        ]}>
+                            {counselor.is_available ? 'Available Now' : 'Next slot: 2:00 PM'}
+                        </Text>
+                    </View>
+                    <Text style={styles.experience}>
+                        {counselor.years_experience} {counselor.years_experience === 1 ? 'yr' : 'yrs'} exp
+                    </Text>
+                </View>
             </View>
         </TouchableOpacity>
     );
@@ -88,21 +122,45 @@ const styles = StyleSheet.create({
         borderRadius: borderRadius.lg,
         padding: spacing.md,
         marginBottom: spacing.md,
-        ...shadows.sm,
+        borderWidth: 1,
+        borderColor: colors.border,
+    },
+    avatarContainer: {
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        borderWidth: 2,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: spacing.md,
+        position: 'relative',
     },
     avatar: {
-        width: 60,
-        height: 60,
-        borderRadius: 30,
-        backgroundColor: colors.primaryLight,
+        width: 52,
+        height: 52,
+        borderRadius: 26,
+    },
+    avatarPlaceholder: {
+        width: 52,
+        height: 52,
+        borderRadius: 26,
         alignItems: 'center',
         justifyContent: 'center',
-        marginRight: spacing.md,
     },
     avatarText: {
         fontSize: typography.sizes.xl,
         fontWeight: typography.weights.bold,
-        color: colors.textInverse,
+        color: colors.textPrimary,
+    },
+    statusIndicator: {
+        position: 'absolute',
+        bottom: 2,
+        right: 2,
+        width: 12,
+        height: 12,
+        borderRadius: 6,
+        borderWidth: 2,
+        borderColor: colors.surface,
     },
     content: {
         flex: 1,
@@ -114,55 +172,65 @@ const styles = StyleSheet.create({
         marginBottom: spacing.xs,
     },
     name: {
-        fontSize: typography.sizes.lg,
+        fontSize: typography.sizes.md,
         fontWeight: typography.weights.semibold,
         color: colors.textPrimary,
         flex: 1,
     },
-    availabilityBadge: {
-        paddingHorizontal: spacing.sm,
-        paddingVertical: spacing.xs,
-        borderRadius: borderRadius.full,
+    ratingContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
         marginLeft: spacing.sm,
     },
-    available: {
-        backgroundColor: colors.available + '20',
+    starIcon: {
+        fontSize: 14,
+        color: colors.star,
+        marginRight: 2,
     },
-    unavailable: {
-        backgroundColor: colors.unavailable + '20',
-    },
-    availabilityText: {
-        fontSize: typography.sizes.xs,
+    ratingText: {
+        fontSize: typography.sizes.sm,
+        color: colors.textPrimary,
         fontWeight: typography.weights.medium,
     },
-    bio: {
+    title: {
         fontSize: typography.sizes.sm,
         color: colors.textSecondary,
         marginBottom: spacing.sm,
-        lineHeight: 20,
     },
-    specialties: {
+    tagsContainer: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        marginBottom: spacing.xs,
+        marginBottom: spacing.sm,
     },
-    specialtyTag: {
-        backgroundColor: colors.primary + '15',
+    tag: {
+        backgroundColor: colors.tagBackground,
         paddingHorizontal: spacing.sm,
         paddingVertical: spacing.xs,
         borderRadius: borderRadius.sm,
         marginRight: spacing.xs,
-        marginBottom: spacing.xs,
     },
-    specialtyText: {
+    tagText: {
         fontSize: typography.sizes.xs,
-        color: colors.primary,
+        color: colors.tagText,
         fontWeight: typography.weights.medium,
     },
-    moreText: {
-        fontSize: typography.sizes.xs,
-        color: colors.textSecondary,
-        alignSelf: 'center',
+    footer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    availabilityContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    availabilityDot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        marginRight: spacing.xs,
+    },
+    availabilityText: {
+        fontSize: typography.sizes.sm,
     },
     experience: {
         fontSize: typography.sizes.xs,

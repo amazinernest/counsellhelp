@@ -1,227 +1,420 @@
-// Home screen - dashboard for clients and counselors
+// Home screen - Find Support dashboard for clients
 
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, RefreshControl } from 'react-native';
+import {
+    View,
+    Text,
+    StyleSheet,
+    ScrollView,
+    TouchableOpacity,
+    Image,
+    RefreshControl,
+    TextInput,
+} from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
-import { useNotifications } from '../../contexts/NotificationContext';
 import { supabase } from '../../lib/supabase';
-import Button from '../../components/Button';
 import { colors, spacing, borderRadius, typography, shadows } from '../../styles/theme';
-import { Conversation, CounselorProfile } from '../../types';
+import { CounselorProfile, Profile } from '../../types';
+
+// Extended counselor type with additional fields
+interface ExtendedCounselor extends CounselorProfile {
+    profile: Profile;
+    rating?: number;
+    nextSlot?: string;
+}
+
+// Filter categories
+const filterCategories = [
+    { id: 'all', label: 'All' },
+    { id: 'anxiety', label: 'Anxiety' },
+    { id: 'depression', label: 'Depression' },
+    { id: 'relationships', label: 'Relationships' },
+    { id: 'stress', label: 'Stress' },
+    { id: 'family', label: 'Family' },
+    { id: 'career', label: 'Career' },
+];
+
+// Specialty labels map
+const specialtyLabels: Record<string, string> = {
+    relationship: 'Relationships',
+    academic: 'Academic',
+    career: 'Career',
+    mental_wellbeing: 'CBT',
+    family: 'Family',
+    stress_management: 'Stress',
+    personal_development: 'Personal Development',
+    anxiety: 'Anxiety',
+    depression: 'Depression',
+    trauma: 'Trauma',
+    medication: 'Medication',
+    sleep: 'Sleep',
+};
 
 export default function HomeScreen({ navigation }: any) {
     const { profile, user } = useAuth();
-    const { unreadCount } = useNotifications();
-    const [recentConversations, setRecentConversations] = useState<any[]>([]);
-    const [counselorProfile, setCounselorProfile] = useState<CounselorProfile | null>(null);
-    const [activeClients, setActiveClients] = useState(0);
+    const [counselors, setCounselors] = useState<ExtendedCounselor[]>([]);
     const [refreshing, setRefreshing] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [activeFilter, setActiveFilter] = useState('all');
 
-    const isClient = profile?.role === 'client';
-    const isCounselor = profile?.role === 'counselor';
+    // Sample counselor data to match the design
+    const sampleCounselors: ExtendedCounselor[] = [
+        {
+            id: '1',
+            bio: 'Clinical Psychologist',
+            specialties: ['mental_wellbeing', 'anxiety'] as any,
+            years_experience: 12,
+            is_available: true,
+            rating: 4.9,
+            profile: {
+                id: '1',
+                email: 'sarah@example.com',
+                full_name: 'Dr. Sarah Jenkins',
+                role: 'counselor',
+                created_at: '',
+                onboarding_complete: true,
+                avatar_url: null,
+            },
+        },
+        {
+            id: '2',
+            bio: 'Licensed Therapist',
+            specialties: ['depression', 'trauma'] as any,
+            years_experience: 8,
+            is_available: false,
+            rating: 4.8,
+            nextSlot: '2:00 PM',
+            profile: {
+                id: '2',
+                email: 'michael@example.com',
+                full_name: 'Dr. Michael Chen',
+                role: 'counselor',
+                created_at: '',
+                onboarding_complete: true,
+                avatar_url: null,
+            },
+        },
+        {
+            id: '3',
+            bio: 'Family Counsellor',
+            specialties: ['relationship', 'family'] as any,
+            years_experience: 15,
+            is_available: true,
+            rating: 5.0,
+            profile: {
+                id: '3',
+                email: 'emily@example.com',
+                full_name: 'Dr. Emily White',
+                role: 'counselor',
+                created_at: '',
+                onboarding_complete: true,
+                avatar_url: null,
+            },
+        },
+        {
+            id: '4',
+            bio: 'Psychiatrist',
+            specialties: ['medication', 'sleep'] as any,
+            years_experience: 10,
+            is_available: false,
+            rating: 4.7,
+            nextSlot: 'Tomorrow',
+            profile: {
+                id: '4',
+                email: 'david@example.com',
+                full_name: 'Dr. David Ross',
+                role: 'counselor',
+                created_at: '',
+                onboarding_complete: true,
+                avatar_url: null,
+            },
+        },
+    ];
 
-    // Load dashboard data
-    async function loadDashboard() {
-        if (!user) return;
-
+    // Load counselors
+    async function loadCounselors() {
         try {
-            // Get recent conversations with client/counselor info
-            const { data: conversations } = await supabase
-                .from('conversations')
+            const { data } = await supabase
+                .from('counselor_profiles')
                 .select(`
                     *,
-                    client:profiles!conversations_client_id_fkey(id, full_name, avatar_url),
-                    counselor:profiles!conversations_counselor_id_fkey(id, full_name, avatar_url)
+                    profile:profiles(*)
                 `)
-                .or(`client_id.eq.${user.id},counselor_id.eq.${user.id}`)
-                .order('last_message_at', { ascending: false })
-                .limit(3);
+                .order('is_available', { ascending: false });
 
-            if (conversations) {
-                setRecentConversations(conversations);
-                // Count unique clients for counselors
-                if (isCounselor) {
-                    const clientIds = new Set(conversations.map((c) => c.client_id));
-                    setActiveClients(clientIds.size);
-                }
-            }
-
-            // Load counselor profile if user is counselor
-            if (isCounselor) {
-                const { data: counselorData } = await supabase
-                    .from('counselor_profiles')
-                    .select('*')
-                    .eq('id', user.id)
-                    .single();
-
-                if (counselorData) {
-                    setCounselorProfile(counselorData);
-                }
+            if (data && data.length > 0) {
+                // Add random ratings to real data
+                const withRatings = data.map((c: any) => ({
+                    ...c,
+                    rating: (Math.random() * 0.5 + 4.5).toFixed(1),
+                    nextSlot: c.is_available ? null : '2:00 PM',
+                }));
+                setCounselors(withRatings);
+            } else {
+                setCounselors(sampleCounselors);
             }
         } catch (err) {
-            console.error('Error loading dashboard:', err);
+            console.error('Error loading counselors:', err);
+            setCounselors(sampleCounselors);
         }
     }
 
     useEffect(() => {
-        loadDashboard();
-    }, [user, profile]);
+        loadCounselors();
+    }, [user]);
 
     async function onRefresh() {
         setRefreshing(true);
-        await loadDashboard();
+        await loadCounselors();
         setRefreshing(false);
     }
 
-    // Navigate to chat
-    function openChat(conversation: any) {
-        const otherUser = isClient ? conversation.counselor : conversation.client;
-        navigation.navigate('Chat', {
-            conversationId: conversation.id,
-            otherUserName: otherUser?.full_name || 'Chat',
-        });
+    // Navigate to counselor profile
+    function openCounselorProfile(counselorId: string) {
+        navigation.navigate('CounselorProfile', { counselorId });
+    }
+
+    // Start or continue chat with counselor
+    async function startChat(counselor: ExtendedCounselor) {
+        if (!user) return;
+
+        try {
+            // Check if client has a paid session with this counselor
+            const { data: paidSession } = await supabase
+                .from('sessions')
+                .select('id, conversation_id')
+                .eq('client_id', user.id)
+                .eq('counselor_id', counselor.id)
+                .eq('status', 'paid')
+                .single();
+
+            if (paidSession && paidSession.conversation_id) {
+                // Already paid, go directly to chat
+                navigation.navigate('Chat', {
+                    conversationId: paidSession.conversation_id,
+                    otherUserName: counselor.profile?.full_name || 'Counselor',
+                });
+            } else {
+                // No paid session, navigate to payment
+                navigation.navigate('Payment', {
+                    counselorId: counselor.id,
+                    counselorName: counselor.profile?.full_name || 'Counselor',
+                });
+            }
+        } catch (err) {
+            // If error (no session found), navigate to payment
+            navigation.navigate('Payment', {
+                counselorId: counselor.id,
+                counselorName: counselor.profile?.full_name || 'Counselor',
+            });
+        }
+    }
+
+    // Get avatar colors based on name
+    function getAvatarColor(name: string): string {
+        const colors = ['#3B82F6', '#8B5CF6', '#EC4899', '#10B981', '#F59E0B'];
+        const index = name.charCodeAt(0) % colors.length;
+        return colors[index];
+    }
+
+    // Render counselor card
+    function renderCounselorCard(counselor: ExtendedCounselor) {
+        const avatarColor = getAvatarColor(counselor.profile?.full_name || 'C');
+
+        return (
+            <TouchableOpacity
+                key={counselor.id}
+                style={styles.counselorCard}
+                onPress={() => openCounselorProfile(counselor.id)}
+                activeOpacity={0.7}
+            >
+                {/* Avatar */}
+                <View style={[styles.avatarContainer, { borderColor: avatarColor }]}>
+                    {counselor.profile?.avatar_url ? (
+                        <Image
+                            source={{ uri: counselor.profile.avatar_url }}
+                            style={styles.avatar}
+                        />
+                    ) : (
+                        <View style={[styles.avatarPlaceholder, { backgroundColor: avatarColor }]}>
+                            <Text style={styles.avatarText}>
+                                {counselor.profile?.full_name?.charAt(0) || 'C'}
+                            </Text>
+                        </View>
+                    )}
+                    {/* Online indicator */}
+                    <View style={[
+                        styles.onlineIndicator,
+                        { backgroundColor: counselor.is_available ? colors.available : colors.warning }
+                    ]} />
+                </View>
+
+                {/* Info */}
+                <View style={styles.counselorInfo}>
+                    <View style={styles.nameRow}>
+                        <Text style={styles.counselorName}>
+                            {counselor.profile?.full_name || 'Counselor'}
+                        </Text>
+                        <View style={styles.ratingContainer}>
+                            <Text style={styles.starIcon}>★</Text>
+                            <Text style={styles.ratingText}>{counselor.rating}</Text>
+                        </View>
+                    </View>
+                    <Text style={styles.counselorTitle}>{counselor.bio}</Text>
+
+                    {/* Tags */}
+                    <View style={styles.tagsRow}>
+                        {counselor.specialties?.slice(0, 2).map((specialty, index) => (
+                            <View key={index} style={styles.tag}>
+                                <Text style={styles.tagText}>
+                                    {specialtyLabels[specialty] || specialty}
+                                </Text>
+                            </View>
+                        ))}
+                    </View>
+
+                    {/* Availability & Action */}
+                    <View style={styles.availabilityRow}>
+                        <View style={styles.availabilityInfo}>
+                            <View style={[
+                                styles.availabilityDot,
+                                { backgroundColor: counselor.is_available ? colors.available : colors.warning }
+                            ]} />
+                            <Text style={[
+                                styles.availabilityText,
+                                { color: counselor.is_available ? colors.available : colors.textSecondary }
+                            ]}>
+                                {counselor.is_available
+                                    ? 'Available Now'
+                                    : `Next slot: ${counselor.nextSlot || 'Tomorrow'}`}
+                            </Text>
+                        </View>
+
+                        {counselor.is_available ? (
+                            <TouchableOpacity
+                                style={styles.chatButton}
+                                onPress={(e) => {
+                                    e.stopPropagation();
+                                    startChat(counselor);
+                                }}
+                            >
+                                <Text style={styles.chatButtonText}>Book ₦5k</Text>
+                            </TouchableOpacity>
+                        ) : (
+                            <TouchableOpacity
+                                style={styles.profileButton}
+                                onPress={(e) => {
+                                    e.stopPropagation();
+                                    openCounselorProfile(counselor.id);
+                                }}
+                            >
+                                <Text style={styles.profileButtonText}>Profile</Text>
+                            </TouchableOpacity>
+                        )}
+                    </View>
+                </View>
+            </TouchableOpacity>
+        );
     }
 
     return (
-        <ScrollView
-            style={styles.container}
-            contentContainerStyle={styles.content}
-            refreshControl={
-                <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-            }
-        >
-            {/* Welcome section */}
-            <View style={styles.welcomeSection}>
-                <Text style={styles.greeting}>
-                    Hello, {profile?.full_name || 'there'}! 👋
-                </Text>
-                <Text style={styles.roleLabel}>
-                    {isClient ? 'Client' : 'Counselor'}
-                </Text>
-            </View>
-
-            {/* Quick stats */}
-            <View style={styles.statsRow}>
-                <View style={[styles.statCard, styles.primaryCard]}>
-                    <Text style={styles.statNumber}>{unreadCount}</Text>
-                    <Text style={styles.statLabel}>Unread Messages</Text>
-                </View>
-                <View style={[styles.statCard, styles.secondaryCard]}>
-                    <Text style={[styles.statNumber, styles.secondaryText]}>
-                        {isCounselor ? activeClients : '🔍'}
-                    </Text>
-                    <Text style={[styles.statLabel, styles.secondaryText]}>
-                        {isCounselor ? 'Active Clients' : 'Find Counselors'}
-                    </Text>
-                </View>
-            </View>
-
-            {/* Counselor availability status */}
-            {isCounselor && counselorProfile && (
-                <View style={styles.section}>
-                    <View style={styles.statusCard}>
-                        <View style={styles.statusRow}>
-                            <Text style={styles.statusLabel}>Your Status</Text>
-                            <View style={[
-                                styles.statusBadge,
-                                { backgroundColor: counselorProfile.is_available ? colors.success + '20' : colors.error + '20' }
-                            ]}>
-                                <Text style={[
-                                    styles.statusText,
-                                    { color: counselorProfile.is_available ? colors.success : colors.error }
-                                ]}>
-                                    {counselorProfile.is_available ? '🟢 Available' : '🔴 Unavailable'}
+        <View style={styles.container}>
+            <ScrollView
+                style={styles.scrollView}
+                contentContainerStyle={styles.content}
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={onRefresh}
+                        tintColor={colors.primary}
+                    />
+                }
+                showsVerticalScrollIndicator={false}
+            >
+                {/* Header */}
+                <View style={styles.header}>
+                    <Text style={styles.headerTitle}>Find Support</Text>
+                    <TouchableOpacity
+                        style={styles.headerAvatar}
+                        onPress={() => navigation.navigate('Profile')}
+                    >
+                        {profile?.avatar_url ? (
+                            <Image
+                                source={{ uri: profile.avatar_url }}
+                                style={styles.headerAvatarImage}
+                            />
+                        ) : (
+                            <View style={styles.headerAvatarPlaceholder}>
+                                <Text style={styles.headerAvatarText}>
+                                    {profile?.full_name?.charAt(0) || '👤'}
                                 </Text>
                             </View>
-                        </View>
-                        <Text style={styles.statusHint}>
-                            {counselorProfile.is_available
-                                ? 'Clients can find you and send messages'
-                                : 'You won\'t appear in the counselor list'}
-                        </Text>
-                        <Button
-                            title="Edit Profile"
-                            onPress={() => navigation.navigate('EditProfile')}
-                            variant="secondary"
-                            style={styles.editButton}
-                        />
-                    </View>
+                        )}
+                    </TouchableOpacity>
                 </View>
-            )}
 
-            {/* Recent conversations */}
-            {recentConversations.length > 0 && (
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>
-                        {isCounselor ? 'Recent Clients' : 'Recent Conversations'}
+                {/* Greeting */}
+                <View style={styles.greetingSection}>
+                    <Text style={styles.greeting}>
+                        Hello, {profile?.full_name?.split(' ')[0] || 'there'}.
                     </Text>
-                    {recentConversations.map((conv) => {
-                        const otherUser = isClient ? conv.counselor : conv.client;
-                        return (
-                            <TouchableOpacity
-                                key={conv.id}
-                                style={styles.conversationCard}
-                                onPress={() => openChat(conv)}
-                            >
-                                {otherUser?.avatar_url ? (
-                                    <Image
-                                        source={{ uri: otherUser.avatar_url }}
-                                        style={styles.convAvatar}
-                                    />
-                                ) : (
-                                    <View style={styles.convAvatarPlaceholder}>
-                                        <Text style={styles.convAvatarText}>
-                                            {otherUser?.full_name?.charAt(0) || '?'}
-                                        </Text>
-                                    </View>
-                                )}
-                                <View style={styles.convInfo}>
-                                    <Text style={styles.convName}>{otherUser?.full_name || 'User'}</Text>
-                                    <Text style={styles.convTime}>
-                                        {new Date(conv.last_message_at).toLocaleDateString()}
-                                    </Text>
-                                </View>
-                                <Text style={styles.convArrow}>→</Text>
-                            </TouchableOpacity>
-                        );
-                    })}
+                    <Text style={styles.subtitle}>
+                        Who would you like to speak with today?
+                    </Text>
                 </View>
-            )}
 
-            {/* Quick actions */}
-            <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Quick Actions</Text>
-
-                {isClient && (
-                    <Button
-                        title="Browse Counselors"
-                        onPress={() => navigation.navigate('Counselors')}
-                        style={styles.actionButton}
+                {/* Search Bar */}
+                <View style={styles.searchContainer}>
+                    <Text style={styles.searchIcon}>🔍</Text>
+                    <TextInput
+                        style={styles.searchInput}
+                        placeholder="Search by name or specialty..."
+                        placeholderTextColor={colors.textLight}
+                        value={searchQuery}
+                        onChangeText={setSearchQuery}
                     />
-                )}
-
-                <Button
-                    title="View All Messages"
-                    onPress={() => navigation.navigate('Messages')}
-                    variant="outline"
-                    style={styles.actionButton}
-                />
-            </View>
-
-            {/* Tips section */}
-            <View style={styles.section}>
-                <Text style={styles.sectionTitle}>
-                    {isClient ? 'Tips for You' : 'Counselor Tips'}
-                </Text>
-                <View style={styles.tipCard}>
-                    <Text style={styles.tipText}>
-                        {isClient
-                            ? 'Take your time to find a counselor that matches your needs. Review their specialties and experience before reaching out.'
-                            : 'Respond to messages promptly to build trust with your clients. Keep your availability status updated in your profile.'}
-                    </Text>
                 </View>
-            </View>
-        </ScrollView>
+
+                {/* Filter Chips */}
+                <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    style={styles.filtersContainer}
+                    contentContainerStyle={styles.filtersContent}
+                >
+                    {filterCategories.map((category) => (
+                        <TouchableOpacity
+                            key={category.id}
+                            style={[
+                                styles.filterChip,
+                                activeFilter === category.id && styles.filterChipActive,
+                            ]}
+                            onPress={() => setActiveFilter(category.id)}
+                        >
+                            <Text
+                                style={[
+                                    styles.filterChipText,
+                                    activeFilter === category.id && styles.filterChipTextActive,
+                                ]}
+                            >
+                                {category.label}
+                            </Text>
+                        </TouchableOpacity>
+                    ))}
+                </ScrollView>
+
+                {/* Recommended Section */}
+                <View style={styles.sectionHeader}>
+                    <Text style={styles.sectionTitle}>Recommended</Text>
+                    <TouchableOpacity onPress={() => navigation.navigate('Counselors')}>
+                        <Text style={styles.viewAllText}>View all</Text>
+                    </TouchableOpacity>
+                </View>
+
+                {/* Counselor Cards */}
+                {counselors.map(renderCounselorCard)}
+            </ScrollView>
+        </View>
     );
 }
 
@@ -230,11 +423,49 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: colors.background,
     },
+    scrollView: {
+        flex: 1,
+    },
     content: {
-        padding: spacing.lg,
         paddingBottom: spacing.xxl,
     },
-    welcomeSection: {
+    header: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: spacing.lg,
+        paddingTop: spacing.xl,
+        paddingBottom: spacing.md,
+    },
+    headerTitle: {
+        fontSize: typography.sizes.lg,
+        fontWeight: typography.weights.semibold,
+        color: colors.textPrimary,
+    },
+    headerAvatar: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        overflow: 'hidden',
+    },
+    headerAvatarImage: {
+        width: 40,
+        height: 40,
+    },
+    headerAvatarPlaceholder: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: colors.surfaceSecondary,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    headerAvatarText: {
+        fontSize: 18,
+        color: colors.textPrimary,
+    },
+    greetingSection: {
+        paddingHorizontal: spacing.lg,
         marginBottom: spacing.lg,
     },
     greeting: {
@@ -243,144 +474,215 @@ const styles = StyleSheet.create({
         color: colors.textPrimary,
         marginBottom: spacing.xs,
     },
-    roleLabel: {
+    subtitle: {
         fontSize: typography.sizes.md,
-        color: colors.primary,
+        color: colors.textSecondary,
+    },
+    searchContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: colors.surface,
+        marginHorizontal: spacing.lg,
+        borderRadius: borderRadius.xl,
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.sm,
+        borderWidth: 1,
+        borderColor: colors.border,
+    },
+    searchIcon: {
+        fontSize: 16,
+        marginRight: spacing.sm,
+    },
+    searchInput: {
+        flex: 1,
+        fontSize: typography.sizes.md,
+        color: colors.textPrimary,
+        paddingVertical: spacing.xs,
+    },
+    filtersContainer: {
+        marginTop: spacing.lg,
+        marginBottom: spacing.md,
+    },
+    filtersContent: {
+        paddingHorizontal: spacing.lg,
+    },
+    filterChip: {
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.sm,
+        borderRadius: borderRadius.full,
+        backgroundColor: colors.surface,
+        borderWidth: 1,
+        borderColor: colors.border,
+        marginRight: spacing.sm,
+    },
+    filterChipActive: {
+        backgroundColor: colors.primary,
+        borderColor: colors.primary,
+    },
+    filterChipText: {
+        fontSize: typography.sizes.sm,
+        color: colors.textSecondary,
         fontWeight: typography.weights.medium,
     },
-    statsRow: {
-        flexDirection: 'row',
-        marginBottom: spacing.lg,
-    },
-    statCard: {
-        flex: 1,
-        padding: spacing.md,
-        borderRadius: borderRadius.lg,
-        alignItems: 'center',
-        marginRight: spacing.md,
-        ...shadows.sm,
-    },
-    primaryCard: {
-        backgroundColor: colors.primary,
-    },
-    secondaryCard: {
-        backgroundColor: colors.surface,
-        marginRight: 0,
-    },
-    statNumber: {
-        fontSize: typography.sizes.xxl,
-        fontWeight: typography.weights.bold,
-        color: colors.textInverse,
-        marginBottom: spacing.xs,
-    },
-    statLabel: {
-        fontSize: typography.sizes.sm,
-        color: colors.textInverse,
-        opacity: 0.9,
-    },
-    secondaryText: {
+    filterChipTextActive: {
         color: colors.textPrimary,
     },
-    section: {
-        marginBottom: spacing.lg,
+    sectionHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: spacing.lg,
+        marginTop: spacing.md,
+        marginBottom: spacing.md,
     },
     sectionTitle: {
         fontSize: typography.sizes.lg,
         fontWeight: typography.weights.semibold,
         color: colors.textPrimary,
-        marginBottom: spacing.md,
     },
-    statusCard: {
+    viewAllText: {
+        fontSize: typography.sizes.sm,
+        color: colors.primary,
+        fontWeight: typography.weights.medium,
+    },
+    counselorCard: {
+        flexDirection: 'row',
         backgroundColor: colors.surface,
-        padding: spacing.md,
+        marginHorizontal: spacing.lg,
+        marginBottom: spacing.md,
         borderRadius: borderRadius.lg,
-        ...shadows.sm,
+        padding: spacing.md,
+        borderWidth: 1,
+        borderColor: colors.border,
     },
-    statusRow: {
+    avatarContainer: {
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        borderWidth: 2,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: spacing.md,
+        position: 'relative',
+    },
+    avatar: {
+        width: 52,
+        height: 52,
+        borderRadius: 26,
+    },
+    avatarPlaceholder: {
+        width: 52,
+        height: 52,
+        borderRadius: 26,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    avatarText: {
+        fontSize: typography.sizes.xl,
+        fontWeight: typography.weights.bold,
+        color: colors.textPrimary,
+    },
+    onlineIndicator: {
+        position: 'absolute',
+        bottom: 2,
+        right: 2,
+        width: 12,
+        height: 12,
+        borderRadius: 6,
+        borderWidth: 2,
+        borderColor: colors.surface,
+    },
+    counselorInfo: {
+        flex: 1,
+    },
+    nameRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
+        marginBottom: spacing.xs,
+    },
+    counselorName: {
+        fontSize: typography.sizes.md,
+        fontWeight: typography.weights.semibold,
+        color: colors.textPrimary,
+        flex: 1,
+    },
+    ratingContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    starIcon: {
+        fontSize: 14,
+        color: colors.star,
+        marginRight: 2,
+    },
+    ratingText: {
+        fontSize: typography.sizes.sm,
+        color: colors.textPrimary,
+        fontWeight: typography.weights.medium,
+    },
+    counselorTitle: {
+        fontSize: typography.sizes.sm,
+        color: colors.textSecondary,
         marginBottom: spacing.sm,
     },
-    statusLabel: {
-        fontSize: typography.sizes.md,
-        fontWeight: typography.weights.medium,
-        color: colors.textPrimary,
+    tagsRow: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        marginBottom: spacing.sm,
     },
-    statusBadge: {
+    tag: {
+        backgroundColor: colors.tagBackground,
         paddingHorizontal: spacing.sm,
         paddingVertical: spacing.xs,
         borderRadius: borderRadius.sm,
+        marginRight: spacing.xs,
     },
-    statusText: {
-        fontSize: typography.sizes.sm,
+    tagText: {
+        fontSize: typography.sizes.xs,
+        color: colors.tagText,
         fontWeight: typography.weights.medium,
     },
-    statusHint: {
-        fontSize: typography.sizes.sm,
-        color: colors.textSecondary,
-        marginBottom: spacing.md,
+    availabilityRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
     },
-    editButton: {
-        marginTop: spacing.xs,
-    },
-    conversationCard: {
+    availabilityInfo: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: colors.surface,
-        padding: spacing.md,
-        borderRadius: borderRadius.md,
-        marginBottom: spacing.sm,
-        ...shadows.sm,
     },
-    convAvatar: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
+    availabilityDot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        marginRight: spacing.xs,
     },
-    convAvatarPlaceholder: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
+    availabilityText: {
+        fontSize: typography.sizes.sm,
+    },
+    chatButton: {
         backgroundColor: colors.primary,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    convAvatarText: {
-        fontSize: 18,
-        fontWeight: typography.weights.bold,
-        color: colors.textInverse,
-    },
-    convInfo: {
-        flex: 1,
-        marginLeft: spacing.md,
-    },
-    convName: {
-        fontSize: typography.sizes.md,
-        fontWeight: typography.weights.medium,
-        color: colors.textPrimary,
-    },
-    convTime: {
-        fontSize: typography.sizes.xs,
-        color: colors.textSecondary,
-    },
-    convArrow: {
-        fontSize: typography.sizes.lg,
-        color: colors.textSecondary,
-    },
-    actionButton: {
-        marginBottom: spacing.sm,
-    },
-    tipCard: {
-        backgroundColor: colors.primary + '10',
-        padding: spacing.md,
+        paddingHorizontal: spacing.lg,
+        paddingVertical: spacing.sm,
         borderRadius: borderRadius.md,
-        borderLeftWidth: 4,
-        borderLeftColor: colors.primary,
     },
-    tipText: {
+    chatButtonText: {
+        fontSize: typography.sizes.sm,
+        color: colors.textPrimary,
+        fontWeight: typography.weights.semibold,
+    },
+    profileButton: {
+        backgroundColor: 'transparent',
+        paddingHorizontal: spacing.lg,
+        paddingVertical: spacing.sm,
+        borderRadius: borderRadius.md,
+        borderWidth: 1,
+        borderColor: colors.border,
+    },
+    profileButtonText: {
         fontSize: typography.sizes.sm,
         color: colors.textSecondary,
-        lineHeight: 22,
+        fontWeight: typography.weights.medium,
     },
 });

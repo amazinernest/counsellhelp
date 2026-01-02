@@ -1,23 +1,23 @@
-// Loading spinner component for async operations
+// Loading spinner component with dark theme
 
 import React from 'react';
-import { View, ActivityIndicator, StyleSheet, Text } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { colors, spacing, typography } from '../styles/theme';
 
 interface LoadingSpinnerProps {
+    fullScreen?: boolean;
     message?: string;
     size?: 'small' | 'large';
-    fullScreen?: boolean;
 }
 
 export default function LoadingSpinner({
+    fullScreen = false,
     message,
     size = 'large',
-    fullScreen = false,
 }: LoadingSpinnerProps) {
     if (fullScreen) {
         return (
-            <View style={styles.fullScreen}>
+            <View style={styles.fullScreenContainer}>
                 <ActivityIndicator size={size} color={colors.primary} />
                 {message && <Text style={styles.message}>{message}</Text>}
             </View>
@@ -38,7 +38,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
-    fullScreen: {
+    fullScreenContainer: {
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
@@ -46,7 +46,8 @@ const styles = StyleSheet.create({
     },
     message: {
         marginTop: spacing.md,
-        fontSize: typography.sizes.sm,
+        fontSize: typography.sizes.md,
         color: colors.textSecondary,
+        textAlign: 'center',
     },
 });
