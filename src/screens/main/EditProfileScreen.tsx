@@ -540,4 +540,61 @@ const styles = StyleSheet.create({
     button: {
         marginTop: spacing.md,
     },
+    // Availability styles
+    availabilityHint: {
+        fontSize: typography.sizes.sm,
+        color: colors.textSecondary,
+        marginBottom: spacing.md,
+    },
+    availabilityContainer: {
+        backgroundColor: colors.surface,
+        borderRadius: borderRadius.md,
+        padding: spacing.md,
+        marginBottom: spacing.lg,
+    },
+    dayRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: spacing.sm,
+    },
+    dayToggle: {
+        width: 50,
+        paddingVertical: spacing.sm,
+        paddingHorizontal: spacing.sm,
+        borderRadius: borderRadius.md,
+        backgroundColor: colors.surfaceSecondary,
+        alignItems: 'center',
+        marginRight: spacing.md,
+    },
+    dayToggleActive: {
+        backgroundColor: colors.primary,
+    },
+    dayText: {
+        fontSize: typography.sizes.sm,
+        fontWeight: typography.weights.medium,
+        color: colors.textSecondary,
+    },
+    dayTextActive: {
+        color: colors.textInverse,
+    },
+    timeInputs: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    timeInput: {
+        backgroundColor: colors.surfaceSecondary,
+        borderRadius: borderRadius.sm,
+        paddingHorizontal: spacing.sm,
+        paddingVertical: spacing.xs,
+        fontSize: typography.sizes.sm,
+        color: colors.textPrimary,
+        width: 65,
+        textAlign: 'center',
+    },
+    timeSeparator: {
+        marginHorizontal: spacing.sm,
+        fontSize: typography.sizes.sm,
+        color: colors.textSecondary,
+    },
 });

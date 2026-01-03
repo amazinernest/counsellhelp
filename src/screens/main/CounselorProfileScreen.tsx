@@ -268,53 +268,27 @@ export default function CounselorProfileScreen({
                     <View style={styles.sectionHeader}>
                         <Text style={styles.sectionIcon}>📅</Text>
                         <Text style={styles.sectionTitle}>Availability</Text>
-                        <Text style={styles.nextAvailable}>Next: Today, 4:00 PM</Text>
                     </View>
 
-                    {/* Date Picker */}
-                    <ScrollView
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        style={styles.datePickerContainer}
-                    >
-                        {availabilityDates.map((date, index) => (
-                            <TouchableOpacity
-                                key={index}
-                                style={[
-                                    styles.dateItem,
-                                    selectedDate === index && styles.dateItemSelected,
-                                ]}
-                                onPress={() => setSelectedDate(index)}
-                            >
-                                <Text style={[
-                                    styles.dateDay,
-                                    selectedDate === index && styles.dateDaySelected,
-                                ]}>
-                                    {date.day === 'Today' ? 'Today' : date.month}
-                                </Text>
-                                <Text style={[
-                                    styles.dateNumber,
-                                    selectedDate === index && styles.dateNumberSelected,
-                                ]}>
-                                    {date.date}
-                                </Text>
-                                <Text style={[
-                                    styles.dateMonth,
-                                    selectedDate === index && styles.dateMonthSelected,
-                                ]}>
-                                    {date.day === 'Today' ? 'Mon' : ''}
-                                </Text>
-                            </TouchableOpacity>
-                        ))}
-                    </ScrollView>
+                    {/* Show actual availability hours */}
+                    <View style={styles.availabilityList}>
+                        {counselor.availability_hours && Object.entries(counselor.availability_hours).map(([day, slots]) => {
+                            const daySlots = slots as { start: string; end: string }[];
+                            if (daySlots.length === 0) return null;
 
-                    {/* Time Slots */}
-                    <View style={styles.timeSlotsContainer}>
-                        {timeSlots.map((time, index) => (
-                            <TouchableOpacity key={index} style={styles.timeSlot}>
-                                <Text style={styles.timeSlotText}>{time}</Text>
-                            </TouchableOpacity>
-                        ))}
+                            const dayLabel = day.charAt(0).toUpperCase() + day.slice(1);
+                            const timeString = daySlots.map(s => `${s.start} - ${s.end}`).join(', ');
+
+                            return (
+                                <View key={day} style={styles.availabilityRow}>
+                                    <Text style={styles.availabilityDay}>{dayLabel}</Text>
+                                    <Text style={styles.availabilityTime}>{timeString}</Text>
+                                </View>
+                            );
+                        })}
+                        {(!counselor.availability_hours || Object.values(counselor.availability_hours).every((s: any) => s.length === 0)) && (
+                            <Text style={styles.noAvailability}>Availability not set</Text>
+                        )}
                     </View>
                 </View>
 
@@ -706,5 +680,30 @@ const styles = StyleSheet.create({
         color: colors.error,
         fontSize: typography.sizes.md,
         textAlign: 'center',
+    },
+    // Availability display styles
+    availabilityList: {
+        marginTop: spacing.sm,
+    },
+    availabilityRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        paddingVertical: spacing.xs,
+        borderBottomWidth: 1,
+        borderBottomColor: colors.border,
+    },
+    availabilityDay: {
+        fontSize: typography.sizes.sm,
+        fontWeight: typography.weights.medium,
+        color: colors.textPrimary,
+    },
+    availabilityTime: {
+        fontSize: typography.sizes.sm,
+        color: colors.textSecondary,
+    },
+    noAvailability: {
+        fontSize: typography.sizes.sm,
+        color: colors.textSecondary,
+        fontStyle: 'italic',
     },
 });
