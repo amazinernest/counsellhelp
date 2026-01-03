@@ -9,6 +9,7 @@ import {
     TouchableOpacity,
     Switch,
     Image,
+    TextInput,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../../contexts/AuthContext';
@@ -17,8 +18,32 @@ import Button from '../../components/Button';
 import Input from '../../components/Input';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { colors, spacing, borderRadius, typography, shadows } from '../../styles/theme';
-import { Specialty, CounselorProfile } from '../../types';
+import { Specialty, CounselorProfile, AvailabilityHours, TimeSlot } from '../../types';
 
+// Days of the week
+const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
+type DayOfWeek = typeof DAYS[number];
+
+const DAY_LABELS: Record<DayOfWeek, string> = {
+    monday: 'Mon',
+    tuesday: 'Tue',
+    wednesday: 'Wed',
+    thursday: 'Thu',
+    friday: 'Fri',
+    saturday: 'Sat',
+    sunday: 'Sun',
+};
+
+// Default empty availability
+const DEFAULT_AVAILABILITY: AvailabilityHours = {
+    monday: [],
+    tuesday: [],
+    wednesday: [],
+    thursday: [],
+    friday: [],
+    saturday: [],
+    sunday: [],
+};
 // Available specialty options
 const specialtyOptions: { id: Specialty; label: string }[] = [
     { id: 'relationship', label: 'Relationship' },
@@ -44,6 +69,7 @@ export default function EditProfileScreen({ navigation }: any) {
     const [yearsExperience, setYearsExperience] = useState('');
     const [isAvailable, setIsAvailable] = useState(true);
     const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+    const [availabilityHours, setAvailabilityHours] = useState<AvailabilityHours>(DEFAULT_AVAILABILITY);
 
     // Load existing profile data
     useEffect(() => {
@@ -63,6 +89,7 @@ export default function EditProfileScreen({ navigation }: any) {
                     setSelectedSpecialties(counselorData.specialties || []);
                     setYearsExperience(counselorData.years_experience?.toString() || '');
                     setIsAvailable(counselorData.is_available ?? true);
+                    setAvailabilityHours(counselorData.availability_hours || DEFAULT_AVAILABILITY);
                 }
 
                 // Set profile data
@@ -87,6 +114,26 @@ export default function EditProfileScreen({ navigation }: any) {
                 ? prev.filter((s) => s !== specialty)
                 : [...prev, specialty]
         );
+    }
+
+    // Toggle day availability
+    function toggleDayAvailability(day: DayOfWeek) {
+        setAvailabilityHours((prev) => ({
+            ...prev,
+            [day]: prev[day].length > 0
+                ? [] // Turn off - remove slots
+                : [{ start: '09:00', end: '17:00' }] // Turn on - add default 9-5
+        }));
+    }
+
+    // Update time for a day
+    function updateDayTime(day: DayOfWeek, field: 'start' | 'end', value: string) {
+        setAvailabilityHours((prev) => ({
+            ...prev,
+            [day]: prev[day].length > 0
+                ? [{ ...prev[day][0], [field]: value }]
+                : [{ start: '09:00', end: '17:00', [field]: value }]
+        }));
     }
 
     // Pick image from gallery
@@ -184,6 +231,7 @@ export default function EditProfileScreen({ navigation }: any) {
                     specialties: selectedSpecialties,
                     years_experience: parseInt(yearsExperience) || 0,
                     is_available: isAvailable,
+                    availability_hours: availabilityHours,
                 });
 
             if (counselorError) throw counselorError;
@@ -280,6 +328,58 @@ export default function EditProfileScreen({ navigation }: any) {
                     onChangeText={setYearsExperience}
                     keyboardType="number-pad"
                 />
+
+                {/* Availability Hours */}
+                <Text style={styles.label}>Availability Hours</Text>
+                <Text style={styles.availabilityHint}>
+                    Set the days and times you're available for sessions
+                </Text>
+                <View style={styles.availabilityContainer}>
+                    {DAYS.map((day) => {
+                        const daySlots = availabilityHours[day];
+                        const isEnabled = daySlots.length > 0;
+                        const startTime = isEnabled ? daySlots[0].start : '09:00';
+                        const endTime = isEnabled ? daySlots[0].end : '17:00';
+
+                        return (
+                            <View key={day} style={styles.dayRow}>
+                                <TouchableOpacity
+                                    style={[
+                                        styles.dayToggle,
+                                        isEnabled && styles.dayToggleActive,
+                                    ]}
+                                    onPress={() => toggleDayAvailability(day)}
+                                >
+                                    <Text style={[
+                                        styles.dayText,
+                                        isEnabled && styles.dayTextActive,
+                                    ]}>
+                                        {DAY_LABELS[day]}
+                                    </Text>
+                                </TouchableOpacity>
+                                {isEnabled && (
+                                    <View style={styles.timeInputs}>
+                                        <TextInput
+                                            style={styles.timeInput}
+                                            value={startTime}
+                                            onChangeText={(v) => updateDayTime(day, 'start', v)}
+                                            placeholder="09:00"
+                                            placeholderTextColor={colors.textLight}
+                                        />
+                                        <Text style={styles.timeSeparator}>to</Text>
+                                        <TextInput
+                                            style={styles.timeInput}
+                                            value={endTime}
+                                            onChangeText={(v) => updateDayTime(day, 'end', v)}
+                                            placeholder="17:00"
+                                            placeholderTextColor={colors.textLight}
+                                        />
+                                    </View>
+                                )}
+                            </View>
+                        );
+                    })}
+                </View>
 
                 {/* Availability toggle */}
                 <View style={styles.toggleRow}>

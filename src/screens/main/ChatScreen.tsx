@@ -271,10 +271,6 @@ export default function ChatScreen({ navigation, route }: ChatScreenProps) {
                     <Text style={styles.headerName}>{otherUserName}</Text>
                     <Text style={styles.headerStatus}>Active now</Text>
                 </View>
-
-                <TouchableOpacity style={styles.moreButton}>
-                    <Text style={styles.moreIcon}>⋮</Text>
-                </TouchableOpacity>
             </View>
 
             {/* Confidentiality Banner */}
@@ -332,9 +328,6 @@ export default function ChatScreen({ navigation, route }: ChatScreenProps) {
                         multiline
                         maxLength={1000}
                     />
-                    <TouchableOpacity style={styles.emojiButton}>
-                        <Text style={styles.emojiIcon}>😊</Text>
-                    </TouchableOpacity>
                 </View>
 
                 <TouchableOpacity

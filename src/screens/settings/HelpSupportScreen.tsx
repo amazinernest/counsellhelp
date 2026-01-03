@@ -98,13 +98,6 @@ export default function HelpSupportScreen({ navigation }: HelpSupportScreenProps
                         subtitle="Available 9 AM - 6 PM"
                         onPress={handleCallSupport}
                     />
-                    <View style={styles.divider} />
-                    <HelpItem
-                        icon="💬"
-                        title="Live Chat"
-                        subtitle="Chat with our support team"
-                        onPress={() => { }}
-                    />
                 </View>
 
                 <Text style={styles.sectionTitle}>FREQUENTLY ASKED QUESTIONS</Text>
@@ -114,30 +107,6 @@ export default function HelpSupportScreen({ navigation }: HelpSupportScreenProps
                         <Text style={styles.faqAnswer}>{faq.answer}</Text>
                     </TouchableOpacity>
                 ))}
-
-                <Text style={styles.sectionTitle}>RESOURCES</Text>
-                <View style={styles.card}>
-                    <HelpItem
-                        icon="📖"
-                        title="User Guide"
-                        subtitle="Learn how to use the app"
-                        onPress={() => { }}
-                    />
-                    <View style={styles.divider} />
-                    <HelpItem
-                        icon="📜"
-                        title="Terms of Service"
-                        subtitle="Read our terms"
-                        onPress={() => { }}
-                    />
-                    <View style={styles.divider} />
-                    <HelpItem
-                        icon="🔒"
-                        title="Privacy Policy"
-                        subtitle="How we protect your data"
-                        onPress={() => { }}
-                    />
-                </View>
             </ScrollView>
         </View>
     );

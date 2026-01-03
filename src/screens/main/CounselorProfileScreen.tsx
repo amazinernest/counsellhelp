@@ -184,9 +184,6 @@ export default function CounselorProfileScreen({
                                 {isFavorite ? '♥' : '♡'}
                             </Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={styles.headerActionButton}>
-                            <Text style={styles.headerActionIcon}>↗</Text>
-                        </TouchableOpacity>
                     </View>
                 </View>
 
@@ -247,9 +244,6 @@ export default function CounselorProfileScreen({
                     <Text style={styles.aboutText}>
                         {counselor.bio || 'I specialize in anxiety and depression management using a warm, evidence-based approach. My goal is to create a safe space where you feel heard and understood. My methodology is rooted in cognitive behavioral therapy (CBT) and mindfulness techniques to help you regain control.'}
                     </Text>
-                    <TouchableOpacity>
-                        <Text style={styles.readMoreText}>Read more</Text>
-                    </TouchableOpacity>
                 </View>
 
                 {/* Expertise Section */}

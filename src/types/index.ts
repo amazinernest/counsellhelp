@@ -25,6 +25,23 @@ export interface Profile {
     credits: number;
 }
 
+// Time slot for availability
+export interface TimeSlot {
+    start: string; // "09:00" format
+    end: string;   // "17:00" format
+}
+
+// Weekly availability hours
+export type AvailabilityHours = {
+    monday: TimeSlot[];
+    tuesday: TimeSlot[];
+    wednesday: TimeSlot[];
+    thursday: TimeSlot[];
+    friday: TimeSlot[];
+    saturday: TimeSlot[];
+    sunday: TimeSlot[];
+};
+
 // Extended counselor profile
 export interface CounselorProfile {
     id: string;
@@ -32,6 +49,7 @@ export interface CounselorProfile {
     specialties: Specialty[];
     years_experience: number;
     is_available: boolean;
+    availability_hours?: AvailabilityHours;
     // Joined data
     profile?: Profile;
 }
