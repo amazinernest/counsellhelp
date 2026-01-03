@@ -277,6 +277,14 @@ export default function ChatScreen({ navigation, route }: ChatScreenProps) {
                 </TouchableOpacity>
             </View>
 
+            {/* Confidentiality Banner */}
+            <View style={styles.confidentialityBanner}>
+                <Text style={styles.confidentialityIcon}>🔒</Text>
+                <Text style={styles.confidentialityText}>
+                    This conversation is private and confidential. Your messages are encrypted and only visible to you and your counselor.
+                </Text>
+            </View>
+
             {/* Messages list */}
             <FlatList
                 ref={flatListRef}
@@ -314,10 +322,6 @@ export default function ChatScreen({ navigation, route }: ChatScreenProps) {
 
             {/* Input area */}
             <View style={styles.inputContainer}>
-                <TouchableOpacity style={styles.attachButton}>
-                    <Text style={styles.attachIcon}>+</Text>
-                </TouchableOpacity>
-
                 <View style={styles.inputWrapper}>
                     <TextInput
                         style={styles.input}
@@ -362,6 +366,25 @@ const styles = StyleSheet.create({
         backgroundColor: colors.background,
         borderBottomWidth: 1,
         borderBottomColor: colors.border,
+    },
+    confidentialityBanner: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#1a3a2a',
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.sm,
+        borderBottomWidth: 1,
+        borderBottomColor: '#2d5a3d',
+    },
+    confidentialityIcon: {
+        fontSize: 14,
+        marginRight: spacing.sm,
+    },
+    confidentialityText: {
+        flex: 1,
+        fontSize: 11,
+        color: '#8fe3a8',
+        lineHeight: 14,
     },
     backButton: {
         width: 40,
@@ -581,20 +604,17 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'flex-end',
         padding: spacing.md,
-        backgroundColor: colors.background,
-        borderTopWidth: 1,
-        borderTopColor: colors.border,
+        backgroundColor: colors.surface,
+        borderTopWidth: 0,
     },
     attachButton: {
         width: 36,
         height: 36,
         borderRadius: 18,
-        backgroundColor: colors.surface,
+        backgroundColor: colors.surfaceSecondary,
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: spacing.sm,
-        borderWidth: 1,
-        borderColor: colors.border,
     },
     attachIcon: {
         fontSize: 20,
@@ -604,11 +624,9 @@ const styles = StyleSheet.create({
         flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: colors.surface,
+        backgroundColor: colors.surfaceSecondary,
         borderRadius: borderRadius.xl,
         paddingHorizontal: spacing.md,
-        borderWidth: 1,
-        borderColor: colors.border,
         minHeight: 44,
     },
     input: {
@@ -617,6 +635,7 @@ const styles = StyleSheet.create({
         color: colors.textPrimary,
         paddingVertical: spacing.sm,
         maxHeight: 100,
+        outlineStyle: 'none' as any,
     },
     emojiButton: {
         padding: spacing.xs,

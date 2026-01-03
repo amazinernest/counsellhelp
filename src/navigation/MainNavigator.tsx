@@ -300,38 +300,4 @@ export default function MainNavigator() {
     );
 }
 
-const styles = StyleSheet.create({
-    tabIconContainer: {
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    tabIconWrapper: {
-        position: 'relative',
-    },
-    tabIcon: {
-        fontSize: 24,
-    },
-    tabIconActive: {
-        opacity: 1,
-    },
-    tabIconInactive: {
-        opacity: 0.5,
-    },
-    badge: {
-        position: 'absolute',
-        right: -10,
-        top: -4,
-        backgroundColor: colors.primary,
-        borderRadius: 10,
-        minWidth: 18,
-        height: 18,
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingHorizontal: 4,
-    },
-    badgeText: {
-        color: colors.textPrimary,
-        fontSize: 10,
-        fontWeight: typography.weights.bold,
-    },
-});
+

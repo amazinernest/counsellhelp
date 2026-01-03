@@ -200,39 +200,45 @@ export default function HomeScreen({ navigation }: any) {
         navigation.navigate('CounselorProfile', { counselorId });
     }
 
-    // Start or continue chat with counselor
+    // Start or continue chat with counselor (credits-based, no upfront payment)
     async function startChat(counselor: ExtendedCounselor) {
         if (!user) return;
 
         try {
-            // Check if client has a paid session with this counselor
-            const { data: paidSession } = await supabase
-                .from('sessions')
-                .select('id, conversation_id')
+            // Check if conversation already exists
+            const { data: existing } = await supabase
+                .from('conversations')
+                .select('id')
                 .eq('client_id', user.id)
                 .eq('counselor_id', counselor.id)
-                .eq('status', 'paid')
                 .single();
 
-            if (paidSession && paidSession.conversation_id) {
-                // Already paid, go directly to chat
+            if (existing) {
+                // Go to existing conversation
                 navigation.navigate('Chat', {
-                    conversationId: paidSession.conversation_id,
+                    conversationId: existing.id,
                     otherUserName: counselor.profile?.full_name || 'Counselor',
                 });
             } else {
-                // No paid session, navigate to payment
-                navigation.navigate('Payment', {
-                    counselorId: counselor.id,
-                    counselorName: counselor.profile?.full_name || 'Counselor',
+                // Create new conversation
+                const { data: newConvo, error: createError } = await supabase
+                    .from('conversations')
+                    .insert({
+                        client_id: user.id,
+                        counselor_id: counselor.id,
+                    })
+                    .select()
+                    .single();
+
+                if (createError) throw createError;
+
+                navigation.navigate('Chat', {
+                    conversationId: newConvo.id,
+                    otherUserName: counselor.profile?.full_name || 'Counselor',
                 });
             }
         } catch (err) {
-            // If error (no session found), navigate to payment
-            navigation.navigate('Payment', {
-                counselorId: counselor.id,
-                counselorName: counselor.profile?.full_name || 'Counselor',
-            });
+            console.error('Error starting chat:', err);
         }
     }
 
@@ -400,6 +406,23 @@ export default function HomeScreen({ navigation }: any) {
                     </Text>
                 </Animated.View>
 
+                {/* Mental Health Awareness Card */}
+                <Animated.View style={[styles.awarenessCard, { opacity: fadeAnim }]}>
+                    <View style={styles.awarenessIconContainer}>
+                        <Text style={styles.awarenessIcon}>💚</Text>
+                    </View>
+                    <View style={styles.awarenessContent}>
+                        <Text style={styles.awarenessTitle}>Did You Know?</Text>
+                        <Text style={styles.awarenessText}>
+                            1 in 4 people will experience a mental health issue each year.
+                            Speaking up is the first step to feeling better. You're not alone.
+                        </Text>
+                        <View style={styles.awarenessCta}>
+                            <Text style={styles.awarenessCtaText}>💬 It's okay to talk</Text>
+                        </View>
+                    </View>
+                </Animated.View>
+
                 {/* Search Bar */}
                 <View style={styles.searchContainer}>
                     <Text style={styles.searchIcon}>🔍</Text>
@@ -520,6 +543,52 @@ const styles = StyleSheet.create({
     subtitle: {
         fontSize: typography.sizes.md,
         color: colors.textSecondary,
+    },
+    // Mental Health Awareness Card Styles
+    awarenessCard: {
+        flexDirection: 'row',
+        backgroundColor: '#1a472a',
+        marginHorizontal: spacing.lg,
+        marginBottom: spacing.lg,
+        borderRadius: borderRadius.lg,
+        padding: spacing.md,
+        borderWidth: 1,
+        borderColor: '#2d5a3d',
+    },
+    awarenessIconContainer: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        backgroundColor: '#2d5a3d',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: spacing.md,
+    },
+    awarenessIcon: {
+        fontSize: 24,
+    },
+    awarenessContent: {
+        flex: 1,
+    },
+    awarenessTitle: {
+        fontSize: typography.sizes.md,
+        fontWeight: typography.weights.semibold,
+        color: '#8fe3a8',
+        marginBottom: spacing.xs,
+    },
+    awarenessText: {
+        fontSize: typography.sizes.sm,
+        color: '#c8e6d0',
+        lineHeight: 18,
+        marginBottom: spacing.sm,
+    },
+    awarenessCta: {
+        alignSelf: 'flex-start',
+    },
+    awarenessCtaText: {
+        fontSize: typography.sizes.xs,
+        color: '#8fe3a8',
+        fontWeight: typography.weights.medium,
     },
     searchContainer: {
         flexDirection: 'row',

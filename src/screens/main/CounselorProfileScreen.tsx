@@ -8,6 +8,7 @@ import {
     ScrollView,
     TouchableOpacity,
     Image,
+    Alert,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
@@ -84,73 +85,48 @@ export default function CounselorProfileScreen({
         fetchCounselor();
     }, [counselorId]);
 
-    // Start or continue conversation with counselor
+    // Start or continue conversation with counselor (credits-based, no upfront payment)
     async function handleStartChat() {
         if (!user || !counselor) return;
 
         setStartingChat(true);
 
         try {
-            // Check if client has a paid session with this counselor
-            const { data: paidSession } = await supabase
-                .from('sessions')
-                .select('id, conversation_id')
+            // Check if conversation already exists
+            const { data: existing } = await supabase
+                .from('conversations')
+                .select('id')
                 .eq('client_id', user.id)
                 .eq('counselor_id', counselorId)
-                .eq('status', 'paid')
                 .single();
 
-            if (paidSession && paidSession.conversation_id) {
-                // Already paid, go directly to chat
+            if (existing) {
+                // Go to existing conversation
                 navigation.navigate('Chat', {
-                    conversationId: paidSession.conversation_id,
+                    conversationId: existing.id,
                     otherUserName: counselor.profile?.full_name || 'Counselor',
                 });
             } else {
-                // Check if conversation exists (for legacy or free chats)
-                const { data: existing } = await supabase
+                // Create new conversation
+                const { data: newConvo, error: createError } = await supabase
                     .from('conversations')
-                    .select('id')
-                    .eq('client_id', user.id)
-                    .eq('counselor_id', counselorId)
+                    .insert({
+                        client_id: user.id,
+                        counselor_id: counselorId,
+                    })
+                    .select()
                     .single();
 
-                if (existing) {
-                    // Existing conversation - check if paid
-                    const { data: sessionForConvo } = await supabase
-                        .from('sessions')
-                        .select('id')
-                        .eq('conversation_id', existing.id)
-                        .eq('status', 'paid')
-                        .single();
+                if (createError) throw createError;
 
-                    if (sessionForConvo) {
-                        // Paid session exists
-                        navigation.navigate('Chat', {
-                            conversationId: existing.id,
-                            otherUserName: counselor.profile?.full_name || 'Counselor',
-                        });
-                    } else {
-                        // No paid session, navigate to payment
-                        navigation.navigate('Payment', {
-                            counselorId,
-                            counselorName: counselor.profile?.full_name || 'Counselor',
-                        });
-                    }
-                } else {
-                    // No conversation exists, navigate to payment
-                    navigation.navigate('Payment', {
-                        counselorId,
-                        counselorName: counselor.profile?.full_name || 'Counselor',
-                    });
-                }
+                navigation.navigate('Chat', {
+                    conversationId: newConvo.id,
+                    otherUserName: counselor.profile?.full_name || 'Counselor',
+                });
             }
         } catch (err: any) {
-            // If no session found, navigate to payment
-            navigation.navigate('Payment', {
-                counselorId,
-                counselorName: counselor.profile?.full_name || 'Counselor',
-            });
+            console.error('Error starting chat:', err);
+            Alert.alert('Error', 'Failed to start chat. Please try again.');
         }
 
         setStartingChat(false);
