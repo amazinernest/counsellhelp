@@ -118,6 +118,7 @@ export interface CreditTransaction {
 
 // Navigation param lists
 export type RootStackParamList = {
+    Welcome: undefined;
     Auth: undefined;
     Onboarding: undefined;
     Main: undefined;

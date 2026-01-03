@@ -9,13 +9,30 @@ import MainNavigator from './MainNavigator';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { RootStackParamList } from '../types';
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import WelcomeOnboardingScreen from '../screens/onboarding/WelcomeOnboardingScreen';
+
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function AppNavigator() {
     const { session, profile, loading } = useAuth();
+    const [isFirstLaunch, setIsFirstLaunch] = React.useState<boolean | null>(null);
 
-    // Show loading while checking auth state
-    if (loading) {
+    // Check if it's the first launch
+    React.useEffect(() => {
+        async function checkFirstLaunch() {
+            try {
+                const hasSeen = await AsyncStorage.getItem('hasSeenOnboarding');
+                setIsFirstLaunch(hasSeen !== 'true');
+            } catch (e) {
+                setIsFirstLaunch(false); // Default to false on error to avoid getting stuck
+            }
+        }
+        checkFirstLaunch();
+    }, []);
+
+    // Show loading while checking auth state or first launch
+    if (loading || isFirstLaunch === null) {
         return <LoadingSpinner fullScreen message="Loading..." />;
     }
 
@@ -24,9 +41,18 @@ export default function AppNavigator() {
     const hasRole = !!profile?.role;
     const hasCompletedOnboarding = !!profile?.onboarding_complete;
 
+    function handleOnboardingComplete() {
+        setIsFirstLaunch(false);
+    }
+
     return (
         <Stack.Navigator screenOptions={{ headerShown: false }}>
-            {!isAuthenticated ? (
+            {isFirstLaunch ? (
+                // First time user - show welcome onboarding
+                <Stack.Screen name="Welcome">
+                    {(props) => <WelcomeOnboardingScreen {...props} onComplete={handleOnboardingComplete} />}
+                </Stack.Screen>
+            ) : !isAuthenticated ? (
                 // Not logged in - show auth screens
                 <Stack.Screen name="Auth" component={AuthNavigator} />
             ) : !hasRole || !hasCompletedOnboarding ? (
