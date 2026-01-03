@@ -20,8 +20,8 @@ export const colors = {
 
     // Text colors for dark theme
     textPrimary: '#FFFFFF',
-    textSecondary: '#9CA3AF',
-    textLight: '#6B7280',
+    textSecondary: '#E5E7EB',  // Updated: lighter for better visibility
+    textLight: '#D1D5DB',      // Updated: lighter for better visibility
     textInverse: '#FFFFFF',
 
     // Status
@@ -47,7 +47,7 @@ export const colors = {
 
     // Tags/Chips
     tagBackground: '#374151',
-    tagText: '#9CA3AF',
+    tagText: '#F3F4F6',  // Updated: lighter for better visibility
 };
 
 export const spacing = {

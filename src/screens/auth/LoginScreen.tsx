@@ -1,6 +1,6 @@
 // Login screen - email/password authentication
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
     View,
     Text,
@@ -9,6 +9,7 @@ import {
     Platform,
     ScrollView,
     TouchableOpacity,
+    Animated,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../../contexts/AuthContext';
@@ -27,6 +28,26 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+
+    // Animation values
+    const fadeAnim = useRef(new Animated.Value(0)).current;
+    const slideAnim = useRef(new Animated.Value(40)).current;
+
+    // Trigger fade-in animation on mount
+    useEffect(() => {
+        Animated.parallel([
+            Animated.timing(fadeAnim, {
+                toValue: 1,
+                duration: 700,
+                useNativeDriver: true,
+            }),
+            Animated.timing(slideAnim, {
+                toValue: 0,
+                duration: 700,
+                useNativeDriver: true,
+            }),
+        ]).start();
+    }, []);
 
     // Handle login submission
     async function handleLogin() {
@@ -57,15 +78,23 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
                 keyboardShouldPersistTaps="handled"
             >
                 {/* Header */}
-                <View style={styles.header}>
+                <Animated.View
+                    style={[
+                        styles.header,
+                        {
+                            opacity: fadeAnim,
+                            transform: [{ translateY: slideAnim }]
+                        }
+                    ]}
+                >
                     <Text style={styles.title}>Welcome Back</Text>
                     <Text style={styles.subtitle}>
                         Sign in to continue your counseling journey
                     </Text>
-                </View>
+                </Animated.View>
 
                 {/* Form */}
-                <View style={styles.form}>
+                <Animated.View style={[styles.form, { opacity: fadeAnim }]}>
                     <Input
                         label="Email"
                         placeholder="Enter your email"
@@ -93,7 +122,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
                         loading={loading}
                         style={styles.button}
                     />
-                </View>
+                </Animated.View>
 
                 {/* Sign up link */}
                 <View style={styles.footer}>

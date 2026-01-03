@@ -1,7 +1,7 @@
 // Counselor card component for displaying counselor info in lists
 
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import React, { useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Animated } from 'react-native';
 import { colors, spacing, borderRadius, typography } from '../styles/theme';
 import { CounselorProfile, Profile, Specialty } from '../types';
 
@@ -28,90 +28,115 @@ export default function CounselorCard({ counselor, onPress }: CounselorCardProps
     // Generate random rating for demo
     const rating = (Math.random() * 0.5 + 4.5).toFixed(1);
 
+    // Animation value
+    const scaleAnim = useRef(new Animated.Value(1)).current;
+
+    const handlePressIn = () => {
+        Animated.spring(scaleAnim, {
+            toValue: 0.97,
+            useNativeDriver: true,
+            speed: 50,
+            bounciness: 4,
+        }).start();
+    };
+
+    const handlePressOut = () => {
+        Animated.spring(scaleAnim, {
+            toValue: 1,
+            useNativeDriver: true,
+            speed: 50,
+            bounciness: 4,
+        }).start();
+    };
+
     // Get avatar color based on name
     const getAvatarColor = (name: string): string => {
-        const colors = ['#3B82F6', '#8B5CF6', '#EC4899', '#10B981', '#F59E0B'];
-        const index = name.charCodeAt(0) % colors.length;
-        return colors[index];
+        const avatarColors = ['#3B82F6', '#8B5CF6', '#EC4899', '#10B981', '#F59E0B'];
+        const index = name.charCodeAt(0) % avatarColors.length;
+        return avatarColors[index];
     };
 
     const avatarColor = getAvatarColor(counselor.profile?.full_name || 'C');
 
     return (
-        <TouchableOpacity
-            style={styles.card}
-            onPress={onPress}
-            activeOpacity={0.7}
-        >
-            {/* Avatar */}
-            <View style={[styles.avatarContainer, { borderColor: avatarColor }]}>
-                {counselor.profile?.avatar_url ? (
-                    <Image
-                        source={{ uri: counselor.profile.avatar_url }}
-                        style={styles.avatar}
-                    />
-                ) : (
-                    <View style={[styles.avatarPlaceholder, { backgroundColor: avatarColor }]}>
-                        <Text style={styles.avatarText}>
-                            {counselor.profile?.full_name?.charAt(0)?.toUpperCase() || '?'}
-                        </Text>
-                    </View>
-                )}
-                {/* Status indicator */}
-                <View style={[
-                    styles.statusIndicator,
-                    { backgroundColor: counselor.is_available ? colors.available : colors.warning }
-                ]} />
-            </View>
-
-            <View style={styles.content}>
-                {/* Name and rating */}
-                <View style={styles.header}>
-                    <Text style={styles.name} numberOfLines={1}>
-                        {counselor.profile?.full_name || 'Counselor'}
-                    </Text>
-                    <View style={styles.ratingContainer}>
-                        <Text style={styles.starIcon}>★</Text>
-                        <Text style={styles.ratingText}>{rating}</Text>
-                    </View>
-                </View>
-
-                {/* Title/Bio */}
-                <Text style={styles.title} numberOfLines={1}>
-                    {counselor.bio || 'Licensed Counselor'}
-                </Text>
-
-                {/* Specialties */}
-                <View style={styles.tagsContainer}>
-                    {counselor.specialties?.slice(0, 2).map((specialty, index) => (
-                        <View key={index} style={styles.tag}>
-                            <Text style={styles.tagText}>
-                                {specialtyLabels[specialty] || specialty}
+        <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+            <TouchableOpacity
+                style={styles.card}
+                onPress={onPress}
+                onPressIn={handlePressIn}
+                onPressOut={handlePressOut}
+                activeOpacity={0.95}
+            >
+                {/* Avatar */}
+                <View style={[styles.avatarContainer, { borderColor: avatarColor }]}>
+                    {counselor.profile?.avatar_url ? (
+                        <Image
+                            source={{ uri: counselor.profile.avatar_url }}
+                            style={styles.avatar}
+                        />
+                    ) : (
+                        <View style={[styles.avatarPlaceholder, { backgroundColor: avatarColor }]}>
+                            <Text style={styles.avatarText}>
+                                {counselor.profile?.full_name?.charAt(0)?.toUpperCase() || '?'}
                             </Text>
                         </View>
-                    ))}
+                    )}
+                    {/* Status indicator */}
+                    <View style={[
+                        styles.statusIndicator,
+                        { backgroundColor: counselor.is_available ? colors.available : colors.warning }
+                    ]} />
                 </View>
 
-                {/* Availability & Experience */}
-                <View style={styles.footer}>
-                    <View style={styles.availabilityContainer}>
-                        <View style={[
-                            styles.availabilityDot,
-                            { backgroundColor: counselor.is_available ? colors.available : colors.warning }
-                        ]} />
-                        <Text style={[
-                            styles.availabilityText,
-                            { color: counselor.is_available ? colors.available : colors.textSecondary }
-                        ]}>
-                            {counselor.is_available ? 'Available Now' : 'Next slot: 2:00 PM'}
+                <View style={styles.content}>
+                    {/* Name and rating */}
+                    <View style={styles.header}>
+                        <Text style={styles.name} numberOfLines={1}>
+                            {counselor.profile?.full_name || 'Counselor'}
+                        </Text>
+                        <View style={styles.ratingContainer}>
+                            <Text style={styles.starIcon}>★</Text>
+                            <Text style={styles.ratingText}>{rating}</Text>
+                        </View>
+                    </View>
+
+                    {/* Title/Bio */}
+                    <Text style={styles.title} numberOfLines={1}>
+                        {counselor.bio || 'Licensed Counselor'}
+                    </Text>
+
+                    {/* Specialties */}
+                    <View style={styles.tagsContainer}>
+                        {counselor.specialties?.slice(0, 2).map((specialty, index) => (
+                            <View key={index} style={styles.tag}>
+                                <Text style={styles.tagText}>
+                                    {specialtyLabels[specialty] || specialty}
+                                </Text>
+                            </View>
+                        ))}
+                    </View>
+
+                    {/* Availability & Experience */}
+                    <View style={styles.footer}>
+                        <View style={styles.availabilityContainer}>
+                            <View style={[
+                                styles.availabilityDot,
+                                { backgroundColor: counselor.is_available ? colors.available : colors.warning }
+                            ]} />
+                            <Text style={[
+                                styles.availabilityText,
+                                { color: counselor.is_available ? colors.available : colors.textSecondary }
+                            ]}>
+                                {counselor.is_available ? 'Available Now' : 'Next slot: 2:00 PM'}
+                            </Text>
+                        </View>
+                        <Text style={styles.experience}>
+                            {counselor.years_experience} {counselor.years_experience === 1 ? 'yr' : 'yrs'} exp
                         </Text>
                     </View>
-                    <Text style={styles.experience}>
-                        {counselor.years_experience} {counselor.years_experience === 1 ? 'yr' : 'yrs'} exp
-                    </Text>
                 </View>
-            </View>
-        </TouchableOpacity>
+            </TouchableOpacity>
+        </Animated.View>
     );
 }
 

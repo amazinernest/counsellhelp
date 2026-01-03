@@ -1,6 +1,6 @@
 // Reusable Button component with primary/secondary variants
 
-import React from 'react';
+import React, { useRef } from 'react';
 import {
     TouchableOpacity,
     Text,
@@ -8,6 +8,7 @@ import {
     ActivityIndicator,
     ViewStyle,
     TextStyle,
+    Animated,
 } from 'react-native';
 import { colors, spacing, borderRadius, typography } from '../styles/theme';
 
@@ -31,36 +32,59 @@ export default function Button({
     textStyle,
 }: ButtonProps) {
     const isDisabled = disabled || loading;
+    const scaleAnim = useRef(new Animated.Value(1)).current;
+
+    const handlePressIn = () => {
+        Animated.spring(scaleAnim, {
+            toValue: 0.95,
+            useNativeDriver: true,
+            speed: 50,
+            bounciness: 4,
+        }).start();
+    };
+
+    const handlePressOut = () => {
+        Animated.spring(scaleAnim, {
+            toValue: 1,
+            useNativeDriver: true,
+            speed: 50,
+            bounciness: 4,
+        }).start();
+    };
 
     return (
-        <TouchableOpacity
-            style={[
-                styles.button,
-                styles[variant],
-                isDisabled && styles.disabled,
-                style,
-            ]}
-            onPress={onPress}
-            disabled={isDisabled}
-            activeOpacity={0.8}
-        >
-            {loading ? (
-                <ActivityIndicator
-                    color={variant === 'outline' ? colors.primary : colors.textPrimary}
-                />
-            ) : (
-                <Text
-                    style={[
-                        styles.text,
-                        styles[`${variant}Text`],
-                        isDisabled && styles.disabledText,
-                        textStyle,
-                    ]}
-                >
-                    {title}
-                </Text>
-            )}
-        </TouchableOpacity>
+        <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+            <TouchableOpacity
+                style={[
+                    styles.button,
+                    styles[variant],
+                    isDisabled && styles.disabled,
+                    style,
+                ]}
+                onPress={onPress}
+                onPressIn={handlePressIn}
+                onPressOut={handlePressOut}
+                disabled={isDisabled}
+                activeOpacity={0.9}
+            >
+                {loading ? (
+                    <ActivityIndicator
+                        color={variant === 'outline' ? colors.primary : colors.textPrimary}
+                    />
+                ) : (
+                    <Text
+                        style={[
+                            styles.text,
+                            styles[`${variant}Text`],
+                            isDisabled && styles.disabledText,
+                            textStyle,
+                        ]}
+                    >
+                        {title}
+                    </Text>
+                )}
+            </TouchableOpacity>
+        </Animated.View>
     );
 }
 

@@ -1,6 +1,6 @@
 // Home screen - Find Support dashboard for clients
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
     View,
     Text,
@@ -10,11 +10,13 @@ import {
     Image,
     RefreshControl,
     TextInput,
+    Animated,
 } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { colors, spacing, borderRadius, typography, shadows } from '../../styles/theme';
 import { CounselorProfile, Profile } from '../../types';
+import CreditBadge from '../../components/CreditBadge';
 
 // Extended counselor type with additional fields
 interface ExtendedCounselor extends CounselorProfile {
@@ -57,6 +59,26 @@ export default function HomeScreen({ navigation }: any) {
     const [searchQuery, setSearchQuery] = useState('');
     const [activeFilter, setActiveFilter] = useState('all');
 
+    // Animation values
+    const fadeAnim = useRef(new Animated.Value(0)).current;
+    const slideAnim = useRef(new Animated.Value(30)).current;
+
+    // Trigger fade-in animation on mount
+    useEffect(() => {
+        Animated.parallel([
+            Animated.timing(fadeAnim, {
+                toValue: 1,
+                duration: 600,
+                useNativeDriver: true,
+            }),
+            Animated.timing(slideAnim, {
+                toValue: 0,
+                duration: 600,
+                useNativeDriver: true,
+            }),
+        ]).start();
+    }, []);
+
     // Sample counselor data to match the design
     const sampleCounselors: ExtendedCounselor[] = [
         {
@@ -74,6 +96,7 @@ export default function HomeScreen({ navigation }: any) {
                 created_at: '',
                 onboarding_complete: true,
                 avatar_url: null,
+                credits: 0,
             },
         },
         {
@@ -92,6 +115,7 @@ export default function HomeScreen({ navigation }: any) {
                 created_at: '',
                 onboarding_complete: true,
                 avatar_url: null,
+                credits: 0,
             },
         },
         {
@@ -109,6 +133,7 @@ export default function HomeScreen({ navigation }: any) {
                 created_at: '',
                 onboarding_complete: true,
                 avatar_url: null,
+                credits: 0,
             },
         },
         {
@@ -127,6 +152,7 @@ export default function HomeScreen({ navigation }: any) {
                 created_at: '',
                 onboarding_complete: true,
                 avatar_url: null,
+                credits: 0,
             },
         },
     ];
@@ -298,7 +324,7 @@ export default function HomeScreen({ navigation }: any) {
                                     startChat(counselor);
                                 }}
                             >
-                                <Text style={styles.chatButtonText}>Book ₦5k</Text>
+                                <Text style={styles.chatButtonText}>Chat</Text>
                             </TouchableOpacity>
                         ) : (
                             <TouchableOpacity
@@ -334,34 +360,45 @@ export default function HomeScreen({ navigation }: any) {
                 {/* Header */}
                 <View style={styles.header}>
                     <Text style={styles.headerTitle}>Find Support</Text>
-                    <TouchableOpacity
-                        style={styles.headerAvatar}
-                        onPress={() => navigation.navigate('Profile')}
-                    >
-                        {profile?.avatar_url ? (
-                            <Image
-                                source={{ uri: profile.avatar_url }}
-                                style={styles.headerAvatarImage}
-                            />
-                        ) : (
-                            <View style={styles.headerAvatarPlaceholder}>
-                                <Text style={styles.headerAvatarText}>
-                                    {profile?.full_name?.charAt(0) || '👤'}
-                                </Text>
-                            </View>
-                        )}
-                    </TouchableOpacity>
+                    <View style={styles.headerRight}>
+                        <CreditBadge credits={profile?.credits ?? 0} />
+                        <TouchableOpacity
+                            style={styles.headerAvatar}
+                            onPress={() => navigation.navigate('Profile')}
+                        >
+                            {profile?.avatar_url ? (
+                                <Image
+                                    source={{ uri: profile.avatar_url }}
+                                    style={styles.headerAvatarImage}
+                                />
+                            ) : (
+                                <View style={styles.headerAvatarPlaceholder}>
+                                    <Text style={styles.headerAvatarText}>
+                                        {profile?.full_name?.charAt(0) || '👤'}
+                                    </Text>
+                                </View>
+                            )}
+                        </TouchableOpacity>
+                    </View>
                 </View>
 
                 {/* Greeting */}
-                <View style={styles.greetingSection}>
+                <Animated.View
+                    style={[
+                        styles.greetingSection,
+                        {
+                            opacity: fadeAnim,
+                            transform: [{ translateY: slideAnim }]
+                        }
+                    ]}
+                >
                     <Text style={styles.greeting}>
                         Hello, {profile?.full_name?.split(' ')[0] || 'there'}.
                     </Text>
                     <Text style={styles.subtitle}>
                         Who would you like to speak with today?
                     </Text>
-                </View>
+                </Animated.View>
 
                 {/* Search Bar */}
                 <View style={styles.searchContainer}>
@@ -404,15 +441,17 @@ export default function HomeScreen({ navigation }: any) {
                 </ScrollView>
 
                 {/* Recommended Section */}
-                <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionTitle}>Recommended</Text>
-                    <TouchableOpacity onPress={() => navigation.navigate('Counselors')}>
-                        <Text style={styles.viewAllText}>View all</Text>
-                    </TouchableOpacity>
-                </View>
+                <Animated.View style={{ opacity: fadeAnim }}>
+                    <View style={styles.sectionHeader}>
+                        <Text style={styles.sectionTitle}>Recommended</Text>
+                        <TouchableOpacity onPress={() => navigation.navigate('Counselors')}>
+                            <Text style={styles.viewAllText}>View all</Text>
+                        </TouchableOpacity>
+                    </View>
 
-                {/* Counselor Cards */}
-                {counselors.map(renderCounselorCard)}
+                    {/* Counselor Cards */}
+                    {counselors.map(renderCounselorCard)}
+                </Animated.View>
             </ScrollView>
         </View>
     );
@@ -441,6 +480,10 @@ const styles = StyleSheet.create({
         fontSize: typography.sizes.lg,
         fontWeight: typography.weights.semibold,
         color: colors.textPrimary,
+    },
+    headerRight: {
+        flexDirection: 'row',
+        alignItems: 'center',
     },
     headerAvatar: {
         width: 40,

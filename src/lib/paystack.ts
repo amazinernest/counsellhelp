@@ -10,6 +10,13 @@ export const COMMISSION_PERCENTAGE = 20; // 20% platform commission
 export const COMMISSION_KOBO = SESSION_PRICE_KOBO * (COMMISSION_PERCENTAGE / 100); // ₦1,000
 export const COUNSELOR_PAYOUT_KOBO = SESSION_PRICE_KOBO - COMMISSION_KOBO; // ₦4,000
 
+// Credit pricing configuration
+export const CREDITS_PER_PURCHASE = 500; // 500 credits per purchase
+export const CREDIT_PRICE_KOBO = 100000; // ₦1,000 = 100,000 kobo
+export const CREDIT_PRICE_NAIRA = 1000;
+export const CREDITS_TO_MINUTES = 500 / 120; // 500 credits = 120 minutes (2 hours)
+// ~4.17 credits per minute
+
 // Format amount in Naira
 export function formatNaira(amountKobo: number): string {
     const naira = amountKobo / 100;

@@ -22,6 +22,7 @@ export interface Profile {
     created_at: string;
     onboarding_complete: boolean;
     avatar_url: string | null;
+    credits: number;
 }
 
 // Extended counselor profile
@@ -82,6 +83,21 @@ export interface Notification {
     created_at: string;
 }
 
+// Credit transaction types
+export type CreditTransactionType = 'signup_bonus' | 'purchase' | 'usage' | 'refund';
+
+export interface CreditTransaction {
+    id: string;
+    user_id: string;
+    amount: number;
+    type: CreditTransactionType;
+    description: string | null;
+    payment_reference: string | null;
+    paystack_reference: string | null;
+    naira_amount: number | null;
+    created_at: string;
+}
+
 // Navigation param lists
 export type RootStackParamList = {
     Auth: undefined;
@@ -123,6 +139,7 @@ export type MainStackParamList = {
         counselorId: string;
         counselorName: string;
     };
+    BuyCredits: undefined;
 };
 
 // Session status types

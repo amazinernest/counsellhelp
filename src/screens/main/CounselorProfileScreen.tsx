@@ -382,9 +382,8 @@ export default function CounselorProfileScreen({
                 >
                     <Text style={styles.chatIcon}>💬</Text>
                     <Text style={styles.startChatText}>
-                        {startingChat ? 'Loading...' : 'Book Session'}
+                        {startingChat ? 'Loading...' : 'Start Chat'}
                     </Text>
-                    <Text style={styles.priceText}>(₦5,000)</Text>
                 </TouchableOpacity>
             </View>
         </View>
