@@ -50,10 +50,13 @@ function TabIcon({ name, focused, label }: { name: string; focused: boolean; lab
             ]}>
                 {icon}
             </Text>
-            <Text style={[
-                tabStyles.tabLabel,
-                focused && tabStyles.tabLabelActive,
-            ]}>
+            <Text
+                style={[
+                    tabStyles.tabLabel,
+                    focused && tabStyles.tabLabelActive,
+                ]}
+                numberOfLines={1}
+            >
                 {label}
             </Text>
         </View>

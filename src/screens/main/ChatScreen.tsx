@@ -9,6 +9,7 @@ import {
     TextInput,
     TouchableOpacity,
     KeyboardAvoidingView,
+    Keyboard,
     Platform,
     Image,
 } from 'react-native';
@@ -115,6 +116,24 @@ export default function ChatScreen({ navigation, route }: ChatScreenProps) {
                 flatListRef.current?.scrollToEnd({ animated: true });
             }, 100);
         }
+    }, [messages]);
+
+    // Scroll to bottom when keyboard opens
+    useEffect(() => {
+        const keyboardShowListener = Keyboard.addListener(
+            Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+            () => {
+                if (messages.length > 0) {
+                    setTimeout(() => {
+                        flatListRef.current?.scrollToEnd({ animated: true });
+                    }, 100);
+                }
+            }
+        );
+
+        return () => {
+            keyboardShowListener.remove();
+        };
     }, [messages]);
 
     // Send message
@@ -248,8 +267,8 @@ export default function ChatScreen({ navigation, route }: ChatScreenProps) {
     return (
         <KeyboardAvoidingView
             style={styles.container}
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-            keyboardVerticalOffset={0}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
         >
             {/* Custom Header */}
             <View style={styles.header}>
@@ -289,6 +308,8 @@ export default function ChatScreen({ navigation, route }: ChatScreenProps) {
                 renderItem={renderMessage}
                 contentContainerStyle={styles.messagesList}
                 showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+                keyboardDismissMode="interactive"
                 ListEmptyComponent={
                     <View style={styles.emptyContainer}>
                         <Text style={styles.emptyText}>

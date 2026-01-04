@@ -9,10 +9,10 @@ import {
     TouchableOpacity,
     Alert,
     ActivityIndicator,
+    Linking,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
-import { PaystackProvider, usePaystack, PaystackProps } from 'react-native-paystack-webview';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import {
@@ -32,11 +32,9 @@ type PaymentScreenProps = {
     route: RouteProp<MainStackParamList, 'Payment'>;
 };
 
-// Payment content component (uses Paystack hook)
-function PaymentContent({ navigation, route }: PaymentScreenProps) {
+export default function PaymentScreen({ navigation, route }: PaymentScreenProps) {
     const { counselorId, counselorName } = route.params;
     const { user, profile } = useAuth();
-    const { popup } = usePaystack();
 
     const [loading, setLoading] = useState(false);
 
@@ -50,64 +48,65 @@ function PaymentContent({ navigation, route }: PaymentScreenProps) {
         setLoading(true);
 
         try {
-            // Generate unique payment reference
             const reference = generatePaymentReference();
 
-            // Create pending session in database
+            // Create Paystack checkout URL
+            const paystackUrl = `https://checkout.paystack.com/${PAYSTACK_PUBLIC_KEY}` +
+                `?email=${encodeURIComponent(profile.email || 'customer@example.com')}` +
+                `&amount=${SESSION_PRICE_KOBO}` +
+                `&ref=${reference}`;
+
+            // Open browser for payment
+            await Linking.openURL(paystackUrl);
+
+            // Wait a moment then show verification dialog
+            setTimeout(() => {
+                setLoading(false);
+                Alert.alert(
+                    'Complete Payment',
+                    'After completing payment in your browser, tap "I\'ve Paid" to start chatting.',
+                    [
+                        {
+                            text: 'Cancel',
+                            style: 'cancel',
+                        },
+                        {
+                            text: "I've Paid",
+                            onPress: () => completeBooking(reference),
+                        },
+                    ]
+                );
+            }, 1000);
+        } catch (err: any) {
+            console.error('Payment init error:', err);
+            Alert.alert('Error', err.message || 'Failed to open payment page');
+            setLoading(false);
+        }
+    }
+
+    // Complete booking after payment
+    async function completeBooking(reference: string) {
+        setLoading(true);
+
+        try {
+            // Create session in database
             const { data: session, error } = await supabase
                 .from('sessions')
                 .insert({
-                    client_id: user.id,
+                    client_id: user!.id,
                     counselor_id: counselorId,
                     amount: SESSION_PRICE_KOBO,
                     commission: COMMISSION_KOBO,
                     counselor_payout: COUNSELOR_PAYOUT_KOBO,
                     payment_reference: reference,
-                    status: 'pending',
+                    paystack_reference: reference,
+                    status: 'paid',
+                    paid_at: new Date().toISOString(),
                 })
                 .select()
                 .single();
 
             if (error) throw error;
-
-            // Start Paystack payment
-            popup.newTransaction({
-                email: profile.email || 'customer@example.com',
-                amount: SESSION_PRICE_NAIRA,
-                reference,
-                onSuccess: (response: PaystackProps.PaystackTransactionResponse) => {
-                    handlePaymentSuccess(response, session.id);
-                },
-                onCancel: () => {
-                    handlePaymentCancel(session.id);
-                },
-            });
-        } catch (err: any) {
-            console.error('Payment init error:', err);
-            Alert.alert('Error', err.message || 'Failed to initiate payment');
-            setLoading(false);
-        }
-    }
-
-    // Handle successful payment
-    async function handlePaymentSuccess(
-        response: PaystackProps.PaystackTransactionResponse,
-        currentSessionId: string
-    ) {
-        console.log('Payment success:', response);
-
-        try {
-            // Update session status to paid
-            const { error: updateError } = await supabase
-                .from('sessions')
-                .update({
-                    status: 'paid',
-                    paystack_reference: response.reference,
-                    paid_at: new Date().toISOString(),
-                })
-                .eq('id', currentSessionId);
-
-            if (updateError) throw updateError;
 
             // Create or get conversation
             let conversationId: string;
@@ -139,19 +138,19 @@ function PaymentContent({ navigation, route }: PaymentScreenProps) {
             await supabase
                 .from('sessions')
                 .update({ conversation_id: conversationId })
-                .eq('id', currentSessionId);
+                .eq('id', session.id);
 
             // Record counselor earnings
             await supabase.from('counselor_earnings').insert({
                 counselor_id: counselorId,
-                session_id: currentSessionId,
+                session_id: session.id,
                 amount: COUNSELOR_PAYOUT_KOBO,
                 status: 'pending',
             });
 
             // Record platform earnings
             await supabase.from('platform_earnings').insert({
-                session_id: currentSessionId,
+                session_id: session.id,
                 amount: COMMISSION_KOBO,
             });
 
@@ -168,7 +167,7 @@ function PaymentContent({ navigation, route }: PaymentScreenProps) {
 
             // Show success and navigate to chat
             Alert.alert(
-                'Payment Successful! 🎉',
+                'Booking Complete! 🎉',
                 `You can now start chatting with ${counselorName}.`,
                 [
                     {
@@ -183,27 +182,10 @@ function PaymentContent({ navigation, route }: PaymentScreenProps) {
                 ]
             );
         } catch (err: any) {
-            console.error('Post-payment error:', err);
+            console.error('Booking error:', err);
             setLoading(false);
-            Alert.alert(
-                'Payment Received',
-                'Your payment was successful but there was an issue setting up the chat. Please contact support.',
-                [{ text: 'OK', onPress: () => navigation.goBack() }]
-            );
+            Alert.alert('Error', 'Failed to complete booking. Please contact support if payment was made.');
         }
-    }
-
-    // Handle payment cancellation
-    async function handlePaymentCancel(currentSessionId: string) {
-        console.log('Payment cancelled');
-        setLoading(false);
-
-        // Delete pending session
-        if (currentSessionId) {
-            await supabase.from('sessions').delete().eq('id', currentSessionId);
-        }
-
-        Alert.alert('Payment Cancelled', 'Your payment was cancelled.');
     }
 
     return (
@@ -298,20 +280,6 @@ function PaymentContent({ navigation, route }: PaymentScreenProps) {
                 <Text style={styles.secureText}>🔒 Secured by Paystack</Text>
             </View>
         </View>
-    );
-}
-
-// Main component wrapped with PaystackProvider
-export default function PaymentScreen(props: PaymentScreenProps) {
-    const { profile } = useAuth();
-
-    return (
-        <PaystackProvider
-            publicKey={PAYSTACK_PUBLIC_KEY}
-            currency="NGN"
-        >
-            <PaymentContent {...props} />
-        </PaystackProvider>
     );
 }
 

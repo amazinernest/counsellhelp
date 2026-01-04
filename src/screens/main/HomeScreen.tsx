@@ -1,4 +1,4 @@
-// Home screen - Find Support dashboard for clients
+// Home screen - Find Support dashboard for clients, Dashboard for counselors
 
 import React, { useState, useEffect, useRef } from 'react';
 import {
@@ -11,12 +11,422 @@ import {
     RefreshControl,
     TextInput,
     Animated,
+    Switch,
+    Alert,
 } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { colors, spacing, borderRadius, typography, shadows } from '../../styles/theme';
-import { CounselorProfile, Profile } from '../../types';
+import { CounselorProfile, Profile, Conversation } from '../../types';
 import CreditBadge from '../../components/CreditBadge';
+
+
+// Counselor stats interface
+interface CounselorStats {
+    totalClients: number;
+    totalSessions: number;
+    avgRating: number;
+    isAvailable: boolean;
+}
+
+// Recent conversation with client info
+interface RecentConversation extends Conversation {
+    client?: Profile;
+    lastMessage?: string;
+}
+
+// Counselor Dashboard Component
+function CounselorDashboard({ navigation, profile, user }: { navigation: any; profile: Profile; user: any }) {
+    const [stats, setStats] = useState<CounselorStats>({
+        totalClients: 0,
+        totalSessions: 0,
+        avgRating: 5.0,
+        isAvailable: true,
+    });
+    const [recentConversations, setRecentConversations] = useState<RecentConversation[]>([]);
+    const [refreshing, setRefreshing] = useState(false);
+    const [togglingAvailability, setTogglingAvailability] = useState(false);
+
+    // Load counselor data
+    async function loadCounselorData() {
+        if (!user) return;
+
+        try {
+            // Get counselor profile for availability
+            const { data: counselorProfile } = await supabase
+                .from('counselor_profiles')
+                .select('is_available')
+                .eq('id', user.id)
+                .single();
+
+            // Get sessions count
+            const { count: sessionsCount } = await supabase
+                .from('sessions')
+                .select('*', { count: 'exact', head: true })
+                .eq('counselor_id', user.id)
+                .eq('status', 'paid');
+
+            // Get unique clients count
+            const { data: clientsData } = await supabase
+                .from('conversations')
+                .select('client_id')
+                .eq('counselor_id', user.id);
+
+            const uniqueClients = new Set(clientsData?.map(c => c.client_id) || []).size;
+
+            setStats({
+                totalClients: uniqueClients,
+                totalSessions: sessionsCount || 0,
+                avgRating: 4.9, // Placeholder - can be calculated from reviews later
+                isAvailable: counselorProfile?.is_available ?? true,
+            });
+
+            // Get recent conversations
+            const { data: conversations } = await supabase
+                .from('conversations')
+                .select(`
+                    *,
+                    client:profiles!conversations_client_id_fkey(*)
+                `)
+                .eq('counselor_id', user.id)
+                .order('last_message_at', { ascending: false })
+                .limit(5);
+
+            setRecentConversations(conversations || []);
+        } catch (err) {
+            console.error('Error loading counselor data:', err);
+        }
+    }
+
+    useEffect(() => {
+        loadCounselorData();
+    }, [user]);
+
+    async function onRefresh() {
+        setRefreshing(true);
+        await loadCounselorData();
+        setRefreshing(false);
+    }
+
+    // Toggle availability
+    async function toggleAvailability() {
+        if (!user || togglingAvailability) return;
+
+        setTogglingAvailability(true);
+        const newStatus = !stats.isAvailable;
+
+        try {
+            const { error } = await supabase
+                .from('counselor_profiles')
+                .update({ is_available: newStatus })
+                .eq('id', user.id);
+
+            if (error) throw error;
+
+            setStats(prev => ({ ...prev, isAvailable: newStatus }));
+        } catch (err: any) {
+            console.error('Error toggling availability:', err);
+            Alert.alert('Error', 'Failed to update availability');
+        }
+
+        setTogglingAvailability(false);
+    }
+
+    // Open chat with client
+    function openChat(conversation: RecentConversation) {
+        navigation.navigate('Chat', {
+            conversationId: conversation.id,
+            otherUserName: conversation.client?.full_name || 'Client',
+        });
+    }
+
+    return (
+        <View style={styles.container}>
+            <ScrollView
+                style={styles.scrollView}
+                contentContainerStyle={styles.content}
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={onRefresh}
+                        tintColor={colors.primary}
+                    />
+                }
+                showsVerticalScrollIndicator={false}
+            >
+                {/* Header */}
+                <View style={styles.header}>
+                    <Text style={styles.headerTitle}>Dashboard</Text>
+                    <TouchableOpacity
+                        style={styles.headerAvatar}
+                        onPress={() => navigation.navigate('Profile')}
+                    >
+                        {profile?.avatar_url ? (
+                            <Image
+                                source={{ uri: profile.avatar_url }}
+                                style={styles.headerAvatarImage}
+                            />
+                        ) : (
+                            <View style={styles.headerAvatarPlaceholder}>
+                                <Text style={styles.headerAvatarText}>
+                                    {profile?.full_name?.charAt(0) || '👤'}
+                                </Text>
+                            </View>
+                        )}
+                    </TouchableOpacity>
+                </View>
+
+                {/* Welcome & Availability */}
+                <View style={counselorStyles.welcomeSection}>
+                    <Text style={styles.greeting}>
+                        Welcome, {profile?.full_name?.split(' ')[0] || 'Counselor'}
+                    </Text>
+                    <View style={counselorStyles.availabilityCard}>
+                        <View style={counselorStyles.availabilityInfo}>
+                            <View style={[
+                                counselorStyles.statusDot,
+                                { backgroundColor: stats.isAvailable ? colors.available : colors.warning }
+                            ]} />
+                            <Text style={counselorStyles.availabilityText}>
+                                {stats.isAvailable ? 'Available for clients' : 'Currently unavailable'}
+                            </Text>
+                        </View>
+                        <Switch
+                            value={stats.isAvailable}
+                            onValueChange={toggleAvailability}
+                            trackColor={{ false: colors.border, true: colors.primary + '80' }}
+                            thumbColor={stats.isAvailable ? colors.primary : colors.textSecondary}
+                            disabled={togglingAvailability}
+                        />
+                    </View>
+                </View>
+
+                {/* Stats Cards */}
+                <View style={counselorStyles.statsGrid}>
+                    <View style={counselorStyles.statCard}>
+                        <Text style={counselorStyles.statIcon}>👥</Text>
+                        <Text style={counselorStyles.statValue}>{stats.totalClients}</Text>
+                        <Text style={counselorStyles.statLabel}>Clients</Text>
+                    </View>
+                    <View style={counselorStyles.statCard}>
+                        <Text style={counselorStyles.statIcon}>📋</Text>
+                        <Text style={counselorStyles.statValue}>{stats.totalSessions}</Text>
+                        <Text style={counselorStyles.statLabel}>Sessions</Text>
+                    </View>
+                    <View style={counselorStyles.statCard}>
+                        <Text style={counselorStyles.statIcon}>⭐</Text>
+                        <Text style={counselorStyles.statValue}>{stats.avgRating}</Text>
+                        <Text style={counselorStyles.statLabel}>Rating</Text>
+                    </View>
+                </View>
+
+                {/* Quick Actions */}
+                <View style={counselorStyles.quickActions}>
+                    <TouchableOpacity
+                        style={counselorStyles.actionButton}
+                        onPress={() => navigation.navigate('EditProfile')}
+                    >
+                        <Text style={counselorStyles.actionIcon}>✏️</Text>
+                        <Text style={counselorStyles.actionText}>Edit Profile</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={counselorStyles.actionButton}
+                        onPress={() => navigation.navigate('Messages')}
+                    >
+                        <Text style={counselorStyles.actionIcon}>💬</Text>
+                        <Text style={counselorStyles.actionText}>All Chats</Text>
+                    </TouchableOpacity>
+                </View>
+
+                {/* Recent Conversations */}
+                <View style={counselorStyles.section}>
+                    <Text style={styles.sectionTitle}>Recent Clients</Text>
+                    {recentConversations.length === 0 ? (
+                        <View style={counselorStyles.emptyState}>
+                            <Text style={counselorStyles.emptyIcon}>👋</Text>
+                            <Text style={counselorStyles.emptyText}>
+                                No client conversations yet.{'\n'}Turn on availability to receive requests.
+                            </Text>
+                        </View>
+                    ) : (
+                        recentConversations.map((convo) => (
+                            <TouchableOpacity
+                                key={convo.id}
+                                style={counselorStyles.conversationCard}
+                                onPress={() => openChat(convo)}
+                            >
+                                <View style={counselorStyles.clientAvatar}>
+                                    <Text style={counselorStyles.clientAvatarText}>
+                                        {convo.client?.full_name?.charAt(0) || '?'}
+                                    </Text>
+                                </View>
+                                <View style={counselorStyles.conversationInfo}>
+                                    <Text style={counselorStyles.clientName}>
+                                        {convo.client?.full_name || 'Client'}
+                                    </Text>
+                                    <Text style={counselorStyles.lastActive}>
+                                        Tap to continue conversation
+                                    </Text>
+                                </View>
+                                <Text style={counselorStyles.chatArrow}>→</Text>
+                            </TouchableOpacity>
+                        ))
+                    )}
+                </View>
+            </ScrollView>
+        </View>
+    );
+}
+
+// Counselor-specific styles
+const counselorStyles = StyleSheet.create({
+    welcomeSection: {
+        paddingHorizontal: spacing.lg,
+        marginBottom: spacing.lg,
+    },
+    availabilityCard: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        backgroundColor: colors.surface,
+        borderRadius: borderRadius.lg,
+        padding: spacing.md,
+        marginTop: spacing.md,
+        borderWidth: 1,
+        borderColor: colors.border,
+    },
+    availabilityInfo: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    statusDot: {
+        width: 10,
+        height: 10,
+        borderRadius: 5,
+        marginRight: spacing.sm,
+    },
+    availabilityText: {
+        fontSize: typography.sizes.md,
+        color: colors.textPrimary,
+        fontWeight: typography.weights.medium,
+    },
+    statsGrid: {
+        flexDirection: 'row',
+        paddingHorizontal: spacing.lg,
+        marginBottom: spacing.lg,
+        gap: spacing.sm,
+    },
+    statCard: {
+        flex: 1,
+        backgroundColor: colors.surface,
+        borderRadius: borderRadius.lg,
+        padding: spacing.md,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: colors.border,
+    },
+    statIcon: {
+        fontSize: 24,
+        marginBottom: spacing.xs,
+    },
+    statValue: {
+        fontSize: typography.sizes.lg,
+        fontWeight: typography.weights.bold,
+        color: colors.textPrimary,
+        marginBottom: spacing.xs,
+    },
+    statLabel: {
+        fontSize: typography.sizes.xs,
+        color: colors.textSecondary,
+    },
+    quickActions: {
+        flexDirection: 'row',
+        paddingHorizontal: spacing.lg,
+        marginBottom: spacing.lg,
+        gap: spacing.sm,
+    },
+    actionButton: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: colors.primary + '20',
+        borderRadius: borderRadius.lg,
+        paddingVertical: spacing.md,
+        gap: spacing.sm,
+    },
+    actionIcon: {
+        fontSize: 18,
+    },
+    actionText: {
+        fontSize: typography.sizes.sm,
+        fontWeight: typography.weights.semibold,
+        color: colors.primary,
+    },
+    section: {
+        paddingHorizontal: spacing.lg,
+        paddingBottom: spacing.xxl,
+    },
+    emptyState: {
+        alignItems: 'center',
+        paddingVertical: spacing.xl,
+        backgroundColor: colors.surface,
+        borderRadius: borderRadius.lg,
+        borderWidth: 1,
+        borderColor: colors.border,
+    },
+    emptyIcon: {
+        fontSize: 40,
+        marginBottom: spacing.md,
+    },
+    emptyText: {
+        fontSize: typography.sizes.md,
+        color: colors.textSecondary,
+        textAlign: 'center',
+        lineHeight: 22,
+    },
+    conversationCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: colors.surface,
+        borderRadius: borderRadius.lg,
+        padding: spacing.md,
+        marginBottom: spacing.sm,
+        borderWidth: 1,
+        borderColor: colors.border,
+    },
+    clientAvatar: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: colors.primary + '30',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: spacing.md,
+    },
+    clientAvatarText: {
+        fontSize: typography.sizes.lg,
+        fontWeight: typography.weights.bold,
+        color: colors.primary,
+    },
+    conversationInfo: {
+        flex: 1,
+    },
+    clientName: {
+        fontSize: typography.sizes.md,
+        fontWeight: typography.weights.semibold,
+        color: colors.textPrimary,
+        marginBottom: spacing.xs,
+    },
+    lastActive: {
+        fontSize: typography.sizes.sm,
+        color: colors.textSecondary,
+    },
+    chatArrow: {
+        fontSize: typography.sizes.lg,
+        color: colors.textSecondary,
+    },
+});
 
 // Extended counselor type with additional fields
 interface ExtendedCounselor extends CounselorProfile {
@@ -54,6 +464,13 @@ const specialtyLabels: Record<string, string> = {
 
 export default function HomeScreen({ navigation }: any) {
     const { profile, user } = useAuth();
+
+    // If counselor, show counselor dashboard
+    if (profile?.role === 'counselor') {
+        return <CounselorDashboard navigation={navigation} profile={profile} user={user} />;
+    }
+
+    // Client view (existing code below)
     const [counselors, setCounselors] = useState<ExtendedCounselor[]>([]);
     const [refreshing, setRefreshing] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');

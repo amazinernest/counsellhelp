@@ -21,7 +21,8 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#2A9D8F"
       },
-      "package": "com.amazinernest.Counsellhelp"
+      "package": "com.amazinernest.Counsellhelp",
+      "softwareKeyboardLayoutMode": "resize"
     },
     "web": {
       "favicon": "./assets/favicon.png",

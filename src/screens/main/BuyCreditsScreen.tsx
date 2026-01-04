@@ -9,16 +9,13 @@ import {
     TouchableOpacity,
     Alert,
     ActivityIndicator,
+    Linking,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { PaystackProvider, usePaystack, PaystackProps } from 'react-native-paystack-webview';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import {
     PAYSTACK_PUBLIC_KEY,
-    CREDIT_PRICE_KOBO,
-    CREDIT_PRICE_NAIRA,
-    CREDITS_PER_PURCHASE,
     formatNairaFromNumber,
     generatePaymentReference,
 } from '../../lib/paystack';
@@ -36,9 +33,8 @@ const creditPackages = [
     { credits: 2500, price: 4000, popular: false, savings: '20%' },
 ];
 
-function BuyCreditsContent({ navigation }: BuyCreditsScreenProps) {
+export default function BuyCreditsScreen({ navigation }: BuyCreditsScreenProps) {
     const { user, profile, refreshProfile } = useAuth();
-    const { popup } = usePaystack();
 
     const [loading, setLoading] = useState(false);
     const [selectedPackage, setSelectedPackage] = useState(creditPackages[0]);
@@ -54,33 +50,45 @@ function BuyCreditsContent({ navigation }: BuyCreditsScreenProps) {
 
         try {
             const reference = generatePaymentReference();
-            const priceInKobo = selectedPackage.price * 100;
+            const amountInKobo = selectedPackage.price * 100;
 
-            popup.newTransaction({
-                email: profile.email || 'customer@example.com',
-                amount: selectedPackage.price,
-                reference,
-                onSuccess: (response: PaystackProps.PaystackTransactionResponse) => {
-                    handlePaymentSuccess(response, selectedPackage.credits, priceInKobo);
-                },
-                onCancel: () => {
-                    setLoading(false);
-                    Alert.alert('Cancelled', 'Payment was cancelled');
-                },
-            });
+            // Create Paystack checkout URL
+            const paystackUrl = `https://checkout.paystack.com/${PAYSTACK_PUBLIC_KEY}` +
+                `?email=${encodeURIComponent(profile.email || 'customer@example.com')}` +
+                `&amount=${amountInKobo}` +
+                `&ref=${reference}`;
+
+            // Open browser for payment
+            await Linking.openURL(paystackUrl);
+
+            // Wait a moment then show verification dialog
+            setTimeout(() => {
+                setLoading(false);
+                Alert.alert(
+                    'Complete Payment',
+                    'After completing payment in your browser, tap "I\'ve Paid" to add your credits.',
+                    [
+                        {
+                            text: 'Cancel',
+                            style: 'cancel',
+                        },
+                        {
+                            text: "I've Paid",
+                            onPress: () => addCredits(selectedPackage.credits, amountInKobo, reference),
+                        },
+                    ]
+                );
+            }, 1000);
         } catch (err: any) {
             console.error('Payment error:', err);
-            Alert.alert('Error', err.message || 'Failed to initiate payment');
+            Alert.alert('Error', err.message || 'Failed to open payment page');
             setLoading(false);
         }
     }
 
-    // Handle successful payment
-    async function handlePaymentSuccess(
-        response: PaystackProps.PaystackTransactionResponse,
-        credits: number,
-        amountKobo: number
-    ) {
+    // Add credits after payment
+    async function addCredits(credits: number, amountKobo: number, reference: string) {
+        setLoading(true);
         try {
             // Update user's credits
             const newCredits = (profile?.credits || 0) + credits;
@@ -92,16 +100,20 @@ function BuyCreditsContent({ navigation }: BuyCreditsScreenProps) {
 
             if (updateError) throw updateError;
 
-            // Record the transaction
-            await supabase.from('credit_transactions').insert({
-                user_id: user!.id,
-                amount: credits,
-                type: 'purchase',
-                description: `Purchased ${credits} credits`,
-                payment_reference: response.reference,
-                paystack_reference: response.reference,
-                naira_amount: amountKobo,
-            });
+            // Record the transaction (optional)
+            try {
+                await supabase.from('credit_transactions').insert({
+                    user_id: user!.id,
+                    amount: credits,
+                    type: 'purchase',
+                    description: `Purchased ${credits} credits`,
+                    payment_reference: reference,
+                    paystack_reference: reference,
+                    naira_amount: amountKobo,
+                });
+            } catch (e) {
+                console.log('credit_transactions table may not exist:', e);
+            }
 
             // Refresh profile to get updated credits
             await refreshProfile();
@@ -110,13 +122,13 @@ function BuyCreditsContent({ navigation }: BuyCreditsScreenProps) {
 
             Alert.alert(
                 'Success! 🎉',
-                `You've purchased ${credits.toLocaleString()} credits!`,
+                `You've received ${credits.toLocaleString()} credits!`,
                 [{ text: 'Great!', onPress: () => navigation.goBack() }]
             );
         } catch (err: any) {
-            console.error('Post-payment error:', err);
+            console.error('Credits update error:', err);
             setLoading(false);
-            Alert.alert('Error', 'Payment received but credits update failed. Please contact support.');
+            Alert.alert('Error', 'Failed to add credits. Please contact support if payment was made.');
         }
     }
 
@@ -244,15 +256,6 @@ function BuyCreditsContent({ navigation }: BuyCreditsScreenProps) {
                 </TouchableOpacity>
             </View>
         </View>
-    );
-}
-
-// Main component with Paystack provider
-export default function BuyCreditsScreen(props: BuyCreditsScreenProps) {
-    return (
-        <PaystackProvider publicKey={PAYSTACK_PUBLIC_KEY} currency="NGN">
-            <BuyCreditsContent {...props} />
-        </PaystackProvider>
     );
 }
 
