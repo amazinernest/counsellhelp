@@ -154,11 +154,6 @@ export type MainStackParamList = {
     PrivacySecurity: undefined;
     ChangePassword: undefined;
     HelpSupport: undefined;
-    Payment: {
-        counselorId: string;
-        counselorName: string;
-    };
-    BuyCredits: undefined;
 };
 
 // Session status types

@@ -18,7 +18,6 @@ import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { colors, spacing, borderRadius, typography, shadows } from '../../styles/theme';
 import { CounselorProfile, Profile, Conversation } from '../../types';
-import CreditBadge from '../../components/CreditBadge';
 
 
 // Counselor stats interface
@@ -783,26 +782,23 @@ export default function HomeScreen({ navigation }: any) {
                 {/* Header */}
                 <View style={styles.header}>
                     <Text style={styles.headerTitle}>Find Support</Text>
-                    <View style={styles.headerRight}>
-                        <CreditBadge credits={profile?.credits ?? 0} />
-                        <TouchableOpacity
-                            style={styles.headerAvatar}
-                            onPress={() => navigation.navigate('Profile')}
-                        >
-                            {profile?.avatar_url ? (
-                                <Image
-                                    source={{ uri: profile.avatar_url }}
-                                    style={styles.headerAvatarImage}
-                                />
-                            ) : (
-                                <View style={styles.headerAvatarPlaceholder}>
-                                    <Text style={styles.headerAvatarText}>
-                                        {profile?.full_name?.charAt(0) || '👤'}
-                                    </Text>
-                                </View>
-                            )}
-                        </TouchableOpacity>
-                    </View>
+                    <TouchableOpacity
+                        style={styles.headerAvatar}
+                        onPress={() => navigation.navigate('Profile')}
+                    >
+                        {profile?.avatar_url ? (
+                            <Image
+                                source={{ uri: profile.avatar_url }}
+                                style={styles.headerAvatarImage}
+                            />
+                        ) : (
+                            <View style={styles.headerAvatarPlaceholder}>
+                                <Text style={styles.headerAvatarText}>
+                                    {profile?.full_name?.charAt(0) || '👤'}
+                                </Text>
+                            </View>
+                        )}
+                    </TouchableOpacity>
                 </View>
 
                 {/* Greeting */}

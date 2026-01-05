@@ -18,8 +18,7 @@ import SharedNotesScreen from '../screens/settings/SharedNotesScreen';
 import PrivacySecurityScreen from '../screens/settings/PrivacySecurityScreen';
 import ChangePasswordScreen from '../screens/settings/ChangePasswordScreen';
 import HelpSupportScreen from '../screens/settings/HelpSupportScreen';
-import PaymentScreen from '../screens/main/PaymentScreen';
-import BuyCreditsScreen from '../screens/main/BuyCreditsScreen';
+
 import { useAuth } from '../contexts/AuthContext';
 import { useNotifications } from '../contexts/NotificationContext';
 import { colors, typography, spacing, borderRadius } from '../styles/theme';
@@ -289,16 +288,7 @@ export default function MainNavigator() {
                 component={HelpSupportScreen}
                 options={{ headerShown: false }}
             />
-            <Stack.Screen
-                name="Payment"
-                component={PaymentScreen}
-                options={{ headerShown: false }}
-            />
-            <Stack.Screen
-                name="BuyCredits"
-                component={BuyCreditsScreen}
-                options={{ headerShown: false }}
-            />
+
         </Stack.Navigator>
     );
 }
