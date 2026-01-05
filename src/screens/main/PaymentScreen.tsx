@@ -9,10 +9,10 @@ import {
     TouchableOpacity,
     Alert,
     ActivityIndicator,
-    Linking,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
+import { PaystackProvider, usePaystack, PaystackProps } from 'react-native-paystack-webview';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import {
@@ -32,62 +32,53 @@ type PaymentScreenProps = {
     route: RouteProp<MainStackParamList, 'Payment'>;
 };
 
-export default function PaymentScreen({ navigation, route }: PaymentScreenProps) {
+// Inner component that uses the Paystack hook
+function PaymentContent({ navigation, route }: PaymentScreenProps) {
     const { counselorId, counselorName } = route.params;
     const { user, profile } = useAuth();
+    const { popup } = usePaystack();
 
     const [loading, setLoading] = useState(false);
 
-    // Create session and initiate payment
-    async function handlePayNow() {
+    // Start payment process
+    function handlePayNow() {
         if (!user || !profile) {
             Alert.alert('Error', 'Please log in to continue');
             return;
         }
 
+        const reference = generatePaymentReference();
+
+        popup.checkout({
+            email: profile.email || 'customer@example.com',
+            amount: SESSION_PRICE_NAIRA, // Amount in the currency's main unit (Naira, not kobo)
+            reference,
+            onSuccess: (response: PaystackProps.PaystackTransactionResponse) => {
+                console.log('Payment successful:', response);
+                handlePaymentSuccess(response.reference || reference);
+            },
+            onCancel: () => {
+                console.log('Payment cancelled');
+                Alert.alert('Payment Cancelled', 'You can try again when you\'re ready.');
+            },
+        });
+    }
+
+    // Handle successful payment
+    async function handlePaymentSuccess(reference: string) {
         setLoading(true);
 
         try {
-            const reference = generatePaymentReference();
-
-            // Create Paystack checkout URL
-            const paystackUrl = `https://checkout.paystack.com/${PAYSTACK_PUBLIC_KEY}` +
-                `?email=${encodeURIComponent(profile.email || 'customer@example.com')}` +
-                `&amount=${SESSION_PRICE_KOBO}` +
-                `&ref=${reference}`;
-
-            // Open browser for payment
-            await Linking.openURL(paystackUrl);
-
-            // Wait a moment then show verification dialog
-            setTimeout(() => {
-                setLoading(false);
-                Alert.alert(
-                    'Complete Payment',
-                    'After completing payment in your browser, tap "I\'ve Paid" to start chatting.',
-                    [
-                        {
-                            text: 'Cancel',
-                            style: 'cancel',
-                        },
-                        {
-                            text: "I've Paid",
-                            onPress: () => completeBooking(reference),
-                        },
-                    ]
-                );
-            }, 1000);
+            await completeBooking(reference);
         } catch (err: any) {
-            console.error('Payment init error:', err);
-            Alert.alert('Error', err.message || 'Failed to open payment page');
+            console.error('Booking error after payment:', err);
+            Alert.alert('Error', 'Payment received but booking failed. Please contact support.');
             setLoading(false);
         }
     }
 
     // Complete booking after payment
     async function completeBooking(reference: string) {
-        setLoading(true);
-
         try {
             // Create session in database
             const { data: session, error } = await supabase
@@ -280,6 +271,15 @@ export default function PaymentScreen({ navigation, route }: PaymentScreenProps)
                 <Text style={styles.secureText}>🔒 Secured by Paystack</Text>
             </View>
         </View>
+    );
+}
+
+// Main component wrapped with PaystackProvider
+export default function PaymentScreen(props: PaymentScreenProps) {
+    return (
+        <PaystackProvider publicKey={PAYSTACK_PUBLIC_KEY} currency="NGN">
+            <PaymentContent {...props} />
+        </PaystackProvider>
     );
 }
 

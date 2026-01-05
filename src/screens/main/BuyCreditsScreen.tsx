@@ -9,9 +9,9 @@ import {
     TouchableOpacity,
     Alert,
     ActivityIndicator,
-    Linking,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { PaystackProvider, usePaystack, PaystackProps } from 'react-native-paystack-webview';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import {
@@ -33,57 +33,40 @@ const creditPackages = [
     { credits: 2500, price: 4000, popular: false, savings: '20%' },
 ];
 
-export default function BuyCreditsScreen({ navigation }: BuyCreditsScreenProps) {
+// Inner component that uses the Paystack hook
+function BuyCreditsContent({ navigation }: BuyCreditsScreenProps) {
     const { user, profile, refreshProfile } = useAuth();
+    const { popup } = usePaystack();
 
     const [loading, setLoading] = useState(false);
     const [selectedPackage, setSelectedPackage] = useState(creditPackages[0]);
 
     // Handle credit purchase
-    async function handlePurchase() {
+    function handlePurchase() {
         if (!user || !profile) {
             Alert.alert('Error', 'Please log in to continue');
             return;
         }
 
-        setLoading(true);
+        const reference = generatePaymentReference();
 
-        try {
-            const reference = generatePaymentReference();
-            const amountInKobo = selectedPackage.price * 100;
-
-            // Create Paystack checkout URL
-            const paystackUrl = `https://checkout.paystack.com/${PAYSTACK_PUBLIC_KEY}` +
-                `?email=${encodeURIComponent(profile.email || 'customer@example.com')}` +
-                `&amount=${amountInKobo}` +
-                `&ref=${reference}`;
-
-            // Open browser for payment
-            await Linking.openURL(paystackUrl);
-
-            // Wait a moment then show verification dialog
-            setTimeout(() => {
-                setLoading(false);
-                Alert.alert(
-                    'Complete Payment',
-                    'After completing payment in your browser, tap "I\'ve Paid" to add your credits.',
-                    [
-                        {
-                            text: 'Cancel',
-                            style: 'cancel',
-                        },
-                        {
-                            text: "I've Paid",
-                            onPress: () => addCredits(selectedPackage.credits, amountInKobo, reference),
-                        },
-                    ]
+        popup.checkout({
+            email: profile.email || 'customer@example.com',
+            amount: selectedPackage.price, // Amount in Naira (not kobo)
+            reference,
+            onSuccess: (response: PaystackProps.PaystackTransactionResponse) => {
+                console.log('Payment successful:', response);
+                addCredits(
+                    selectedPackage.credits,
+                    selectedPackage.price * 100, // Convert to kobo for storage
+                    response.reference || reference
                 );
-            }, 1000);
-        } catch (err: any) {
-            console.error('Payment error:', err);
-            Alert.alert('Error', err.message || 'Failed to open payment page');
-            setLoading(false);
-        }
+            },
+            onCancel: () => {
+                console.log('Payment cancelled');
+                Alert.alert('Payment Cancelled', 'You can try again when you\'re ready.');
+            },
+        });
     }
 
     // Add credits after payment
@@ -256,6 +239,15 @@ export default function BuyCreditsScreen({ navigation }: BuyCreditsScreenProps) 
                 </TouchableOpacity>
             </View>
         </View>
+    );
+}
+
+// Main component wrapped with PaystackProvider
+export default function BuyCreditsScreen(props: BuyCreditsScreenProps) {
+    return (
+        <PaystackProvider publicKey={PAYSTACK_PUBLIC_KEY} currency="NGN">
+            <BuyCreditsContent {...props} />
+        </PaystackProvider>
     );
 }
 
